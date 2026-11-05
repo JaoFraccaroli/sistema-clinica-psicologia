@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Prontuário')}"></head>
+<body>
+<nav th:replace="~{fragmentos :: menu('clinico')}"></nav>
+<div class="container">
+    <div th:replace="~{fragmentos :: mensagens}"></div>
+    <a th:href="@{/clinico/pacientes}">&larr; Pacientes</a>
+    <h1 class="mt-2" th:text="${paciente.nome}">Paciente</h1>
+    <p class="text-muted">Código: <span th:text="${paciente.codigo}"></span></p>
+
+    <h4 class="mt-4">Sessões</h4>
+    <table class="table">
+        <thead><tr><th>Data e hora</th><th>Status</th><th>Anotações</th></tr></thead>
+        <tbody>
+        <tr th:each="s : ${sessoes}">
+            <td th:text="${#temporals.format(s.dataHora, 'dd/MM/yyyy HH:mm')}"></td>
+            <td th:text="${s.status}"></td>
+            <td th:text="${s.anotacoes}"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h4 class="mt-4">Registrar sessão</h4>
+    <form th:action="@{/clinico/pacientes/{id}/sessoes(id=${paciente.id})}" method="post" style="max-width: 640px">
+        <div class="mb-3">
+            <label for="dataHora" class="form-label">Data e hora</label>
+            <input type="datetime-local" id="dataHora" name="dataHora" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="status" class="form-label">Status</label>
+            <select id="status" name="status" class="form-select">
+                <option th:each="st : ${statusPossiveis}" th:value="${st}" th:text="${st}"></option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="anotacoes" class="form-label">Anotações (sigilosas)</label>
+            <textarea id="anotacoes" name="anotacoes" rows="4" class="form-control"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Registrar</button>
+    </form>
+</div>
+</body>
+</html>

@@ -1,55 +1,76 @@
-# Sistema de Clínica – Spring Boot
+# Sistema para Clínica de Psicologia
 
-![Testes](https://github.com/JaoFraccaroli/sistema-clinica-spring-boot/actions/workflows/testes.yml/badge.svg)
+![Testes](https://github.com/JaoFraccaroli/sistema-clinica-psicologia/actions/workflows/testes.yml/badge.svg)
 
-Sistema web para **cadastro de pacientes** e **agendamento de consultas**, desenvolvido como trabalho acadêmico do curso de Engenharia da Computação, em dupla com Andrew.
+Sistema web para uma clínica de psicologia com **área clínica e área financeira separadas**.
 
-## Funcionalidades
+## Por que separar?
 
-- Cadastrar pacientes (nome, idade, telefone, e-mail e especialidade desejada)
-- Listar pacientes cadastrados
-- Agendar consultas por especialidade e horário
-- Listar consultas agendadas
+Dados de saúde são **dados pessoais sensíveis** pela LGPD, e o conteúdo dos atendimentos é sigiloso. Ao mesmo tempo, muitos psicólogos preferem que outra pessoa cuide das cobranças. Se o sistema mistura tudo, não dá para entregar o financeiro a outra pessoa sem expor o prontuário.
+
+Aqui a separação é feita no próprio sistema:
+
+| | Área clínica | Área financeira |
+|---|---|---|
+| Quem acessa | Psicóloga | Psicóloga e quem cuida do financeiro |
+| O que tem | Pacientes, sessões e anotações (prontuário) | Cobranças e pagamentos |
+| Como identifica o paciente | Nome e dados completos | Apenas um **código** (ex.: `PAC-1A2B3C4D`) e os dados de quem paga |
+
+## Como a separação funciona
+
+- **Login com perfis** (Spring Security): `PSICOLOGA` e `FINANCEIRO`. O perfil financeiro recebe **acesso negado (403)** em qualquer página da área clínica.
+- **Módulos independentes**: as tabelas clínicas (`clinico_*`) e financeiras (`fin_*`) não têm ligação entre si. A cobrança guarda só o código do paciente.
+- **Uma única porta de saída**: o financeiro só recebe `DadosFaturamento` (código do paciente, nome e CPF de quem paga, valor da sessão), pela interface `FonteDeDadosFaturamento`. Quem implementa essa interface é a área clínica, que decide o que pode sair de lá.
+- **Regra de arquitetura testada**: um teste falha se algum arquivo do módulo financeiro passar a usar código da área clínica.
+
+## Testes
+
+| Tipo | O que verifica |
+|---|---|
+| **BDD (Cucumber, em português)** | `src/test/resources/features/separacao_dos_dados.feature`: o que cada perfil pode acessar e que a tela do financeiro não mostra anotações das sessões |
+| **Controle de acesso (MockMvc + Spring Security Test)** | Financeiro recebe 403 na lista de pacientes, no prontuário e ao tentar registrar sessão; visitante sem login vai para o login; validação do cadastro |
+| **Regras de negócio (JUnit + Mockito)** | Cobrança com valor zero ou negativo, paciente inexistente, pagamento em dobro |
+| **Arquitetura** | Financeiro não depende da área clínica e só recebe os campos permitidos |
+
+Exemplo de cenário:
+
+```gherkin
+Cenário: O financeiro vê o código do paciente, mas não as anotações das sessões
+  Dado que existe um paciente com a anotação de sessão "Relato sigiloso de teste"
+  E existe uma cobrança para esse paciente
+  E que estou logado como "financeiro"
+  Quando eu acesso "/financeiro/cobrancas"
+  Então a página deve mostrar o código do paciente
+  E a página não deve conter "Relato sigiloso de teste"
+```
+
+Os testes rodam no GitHub Actions a cada push, e o relatório do Cucumber fica nos artefatos da execução.
 
 ## Tecnologias
 
-- Java 17 e Spring Boot 3 (Web, Data JPA)
-- Thymeleaf e Bootstrap 5 nas telas
-- MySQL como banco de dados (H2 em memória nos testes)
-- JUnit 5, Mockito e MockMvc nos testes
-- GitHub Actions para rodar os testes a cada push
-
-## Testes e qualidade
-
-Ao revisar o projeto, encontrei e corrigi defeitos que impediam o sistema de funcionar:
-
-| Defeito | Correção |
-|---|---|
-| Os repositórios estavam com as entidades trocadas (`InterConsulta` salvava `Paciente` e vice-versa) | Cada repositório passou a usar a entidade correta |
-| Métodos `saveAll` personalizados que o Spring Data não consegue implementar | Uso do método padrão `save` |
-| Faltava a classe principal com `@SpringBootApplication` | Classe `TrabalhoMaromoApplication` criada |
-| O controller procurava a tela `listar_consultas`, mas o arquivo se chamava `listar_consulta` | Nome corrigido |
-| A pasta `Templates` com "T" maiúsculo não é encontrada no Linux | Renomeada para `templates` |
-| A listagem de consultas quebrava quando a consulta não tinha paciente | Uso de navegação segura (`paciente?.nome`) |
-| Senha do banco escrita no código | Configuração por variáveis de ambiente |
-
-Os testes automatizados cobrem esses casos:
-
-- `TrabalhoMaromoApplicationTests`: a aplicação sobe sem erros
-- `PacienteServeTest`: regras do serviço de pacientes (com Mockito)
-- `PacienteControllerTest` e `ConsultaControllerTest`: telas, formulários e redirecionamentos (com MockMvc)
-
-```bash
-mvn test
-```
+Java 17, Spring Boot 3 (Web, Data JPA, Security, Validation), Thymeleaf, Bootstrap 5, H2/MySQL, JUnit 5, Mockito, Cucumber.
 
 ## Como rodar
 
-1. Tenha o Java 17, o Maven e um MySQL com o banco `clinica_db` criado.
-2. Configure as variáveis de ambiente do banco:
-   ```bash
-   export DB_URL=jdbc:mysql://localhost:3306/clinica_db
-   export DB_USER=root
-   export DB_PASSWORD=sua_senha
-   ```
-3. Rode `mvn spring-boot:run` e acesse `http://localhost:8080/pacientes/cadastrar`.
+```bash
+mvn spring-boot:run
+```
+
+Acesse `http://localhost:8080`. Usuários de demonstração (com pacientes **fictícios**):
+
+| Usuário | Senha | Perfil |
+|---|---|---|
+| `psicologa` | `psicologa123` | Área clínica e financeira |
+| `financeiro` | `financeiro123` | Somente área financeira |
+
+As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCEIRO`. Por padrão o sistema usa um banco H2 em memória; para MySQL, rode com `-Dspring-boot.run.profiles=mysql` e configure `DB_URL`, `DB_USER` e `DB_PASSWORD`.
+
+## Próximos passos
+
+- Bancos de dados separados para cada área (hoje são tabelas separadas no mesmo banco)
+- Registro de quem acessou cada prontuário (auditoria)
+- Emissão de recibos pela área financeira
+
+## Histórico
+
+Começou como um trabalho acadêmico de cadastro de pacientes e consultas, feito em dupla com Andrew, e foi reestruturado para o cenário de uma clínica de psicologia.

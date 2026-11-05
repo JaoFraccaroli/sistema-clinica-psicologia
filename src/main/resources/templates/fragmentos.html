@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(titulo)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${titulo} + ' · Clínica de Psicologia'">Clínica</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body>
+<nav th:fragment="menu(area)" class="navbar navbar-expand navbar-dark mb-4"
+     th:classappend="${area == 'clinico'} ? 'bg-primary' : 'bg-success'">
+    <div class="container">
+        <span class="navbar-brand" th:text="${area == 'clinico'} ? 'Área clínica' : 'Área financeira'">Área</span>
+        <form th:action="@{/logout}" method="post" class="ms-auto">
+            <button type="submit" class="btn btn-outline-light btn-sm">Sair</button>
+        </form>
+    </div>
+</nav>
+<div th:fragment="mensagens">
+    <div th:if="${mensagem}" class="alert alert-success" th:text="${mensagem}"></div>
+    <div th:if="${erro}" class="alert alert-danger" th:text="${erro}"></div>
+</div>
+</body>
+</html>

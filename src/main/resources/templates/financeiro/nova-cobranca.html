@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Nova cobrança')}"></head>
+<body>
+<nav th:replace="~{fragmentos :: menu('financeiro')}"></nav>
+<div class="container" style="max-width: 640px">
+    <div th:replace="~{fragmentos :: mensagens}"></div>
+    <h1>Nova cobrança</h1>
+    <form th:action="@{/financeiro/cobrancas}" method="post" class="mt-3">
+        <div class="mb-3">
+            <label for="codigoPaciente" class="form-label">Paciente (código) e pagador</label>
+            <select id="codigoPaciente" name="codigoPaciente" class="form-select" required>
+                <option th:each="p : ${pacientes}" th:value="${p.codigoPaciente}"
+                        th:text="${p.codigoPaciente} + ' · ' + ${p.nomePagador}"></option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="valor" class="form-label">Valor (R$)</label>
+            <input type="number" step="0.01" id="valor" name="valor" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="vencimento" class="form-label">Vencimento</label>
+            <input type="date" id="vencimento" name="vencimento" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Criar cobrança</button>
+    </form>
+</div>
+</body>
+</html>
