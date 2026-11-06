@@ -13,7 +13,7 @@
     <p class="text-muted">Os pacientes aparecem apenas pelo código. Dados clínicos não ficam disponíveis nesta área.</p>
     <table class="table table-striped mt-3">
         <thead>
-        <tr><th>Código do paciente</th><th>Pagador</th><th>CPF</th><th>Valor</th><th>Vencimento</th><th>Status</th><th></th></tr>
+        <tr><th>Código do paciente</th><th>Pagador</th><th>CPF</th><th>Valor</th><th>Vencimento</th><th>Situação</th><th></th></tr>
         </thead>
         <tbody>
         <tr th:each="c : ${cobrancas}">
@@ -22,7 +22,13 @@
             <td th:text="${c.cpfPagador}"></td>
             <td th:text="'R$ ' + ${#numbers.formatDecimal(c.valor, 1, 'POINT', 2, 'COMMA')}"></td>
             <td th:text="${#temporals.format(c.vencimento, 'dd/MM/yyyy')}"></td>
-            <td th:text="${c.status}"></td>
+            <td th:with="situacao=${c.situacaoEm(hoje)}">
+                <span class="badge" data-testid="situacao"
+                      th:classappend="${situacao.name() == 'PAGA'} ? 'text-bg-success' : (${situacao.name() == 'ATRASADA'} ? 'text-bg-danger' : 'text-bg-warning')"
+                      th:text="${situacao.descricao}">Pendente</span>
+                <small class="text-danger" th:if="${situacao.name() == 'ATRASADA'}"
+                       th:text="${c.diasEmAtraso(hoje)} + (${c.diasEmAtraso(hoje) == 1} ? ' dia' : ' dias')"></small>
+            </td>
             <td>
                 <form th:if="${podeEditar and c.status.name() == 'PENDENTE'}"
                       th:action="@{/financeiro/cobrancas/{id}/pagar(id=${c.id})}" method="post">

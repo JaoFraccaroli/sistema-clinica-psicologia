@@ -11,6 +11,8 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -47,11 +49,56 @@ class CobrancaServiceTest {
         assertThat(cobranca.getStatus()).isEqualTo(StatusCobranca.PENDENTE);
     }
 
+    // Valores de fronteira do valor da cobrança: o limite é zero
+    @ParameterizedTest(name = "valor {0} é recusado")
+    @ValueSource(strings = { "0", "0.00", "-0.01", "-150.00" })
+    void naoAceitaValorZeroOuNegativo(String valor) {
+        assertThatThrownBy(() -> service.criar("PAC-1", new BigDecimal(valor), LocalDate.now()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("maior que zero");
+    }
+
+    @ParameterizedTest(name = "valor {0} é aceito")
+    @ValueSource(strings = { "0.01", "1", "150.00", "99999.99" })
+    void aceitaValorPositivo(String valor) {
+        when(dadosFaturamento.buscarPorCodigo("PAC-1"))
+                .thenReturn(Optional.of(new DadosFaturamento("PAC-1", "Maria", "529.982.247-25", new BigDecimal("150"))));
+        when(cobrancas.save(any(Cobranca.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertThat(service.criar("PAC-1", new BigDecimal(valor), LocalDate.now()).getValor())
+                .isEqualByComparingTo(valor);
+    }
+
     @Test
-    void naoAceitaValorZeroOuNegativo() {
-        assertThatThrownBy(() -> service.criar("PAC-1", BigDecimal.ZERO, LocalDate.now()))
+    void naoAceitaValorNulo() {
+        assertThatThrownBy(() -> service.criar("PAC-1", null, LocalDate.now()))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.criar("PAC-1", new BigDecimal("-10"), LocalDate.now()))
+    }
+
+    @Test
+    void naoAceitaVencimentoNulo() {
+        assertThatThrownBy(() -> service.criar("PAC-1", BigDecimal.TEN, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("vencimento");
+    }
+
+    @Test
+    void copiaOCpfDoPagador() {
+        when(dadosFaturamento.buscarPorCodigo("PAC-1"))
+                .thenReturn(Optional.of(new DadosFaturamento("PAC-1", "Maria", "529.982.247-25", new BigDecimal("150"))));
+        when(cobrancas.save(any(Cobranca.class))).thenAnswer(i -> i.getArgument(0));
+
+        Cobranca cobranca = service.criar("PAC-1", BigDecimal.TEN, LocalDate.now());
+
+        assertThat(cobranca.getCpfPagador()).isEqualTo("529.982.247-25");
+        assertThat(cobranca.getVencimento()).isEqualTo(LocalDate.now());
+    }
+
+    @Test
+    void naoRegistraPagamentoDeCobrancaInexistente() {
+        when(cobrancas.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.registrarPagamento(99L, LocalDate.now()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

@@ -1,0 +1,24 @@
+cpf;esperado;motivo
+529.982.247-25;true;válido formatado
+52998224725;true;válido só com números
+111.444.777-35;true;válido formatado
+11144477735;true;válido só com números
+123.456.789-09;true;válido formatado
+987.654.321-00;true;válido com os dois dígitos verificadores iguais a zero
+000.000.001-91;true;válido começando com zeros
+  529.982.247-25  ;true;espaços nas pontas são ignorados
+529.982.247-24;false;segundo dígito verificador errado
+529.982.247-15;false;primeiro dígito verificador errado
+52998224726;false;dígito verificador errado sem pontuação
+111.111.111-11;false;todos os dígitos iguais
+00000000000;false;todos os dígitos iguais (zeros)
+99999999999;false;todos os dígitos iguais (noves)
+5299822472;false;10 dígitos (um a menos)
+529982247250;false;12 dígitos (um a mais)
+529.982.24725;false;formatação pela metade
+529-982-247.25;false;separadores trocados
+529 982 247 25;false;espaços no meio
+abc.def.ghi-jk;false;letras no lugar de números
+529.982.247-2a;false;letra no dígito verificador
+'';false;texto vazio
+'   ';false;só espaços

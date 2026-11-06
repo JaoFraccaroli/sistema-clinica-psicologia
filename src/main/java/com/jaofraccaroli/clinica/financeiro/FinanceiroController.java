@@ -30,6 +30,7 @@ public class FinanceiroController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_FINANCEIRO"));
         model.addAttribute("cobrancas", cobrancaService.listar());
         model.addAttribute("podeEditar", podeEditar);
+        model.addAttribute("hoje", LocalDate.now());
         return "financeiro/cobrancas";
     }
 

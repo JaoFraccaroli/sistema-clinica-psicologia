@@ -3,7 +3,7 @@ name: Testes
 on: [push, pull_request]
 
 jobs:
-  testes:
+  qualidade:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,12 +12,25 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: Rodar testes (JUnit + Cucumber)
-        run: ./mvnw -B test
-      - name: Publicar relatório do Cucumber
+
+      - name: Testes (JUnit + Cucumber) e cobertura mínima (JaCoCo)
+        run: mvn -B verify
+
+      - name: Testes de mutação (PIT)
+        run: mvn -B test-compile org.pitest:pitest-maven:mutationCoverage
+
+      - name: Resumo de qualidade
+        if: always()
+        run: python3 scripts/resumo_qualidade.py >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar relatórios
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: relatorio-cucumber
-          path: target/relatorio-cucumber.html
+          name: relatorios-de-qualidade
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
+            target/pit-reports/
+            target/relatorio-cucumber.html
           if-no-files-found: ignore

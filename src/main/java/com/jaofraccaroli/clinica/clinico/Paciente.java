@@ -9,6 +9,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import com.jaofraccaroli.clinica.comum.CpfValido;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -40,6 +42,7 @@ public class Paciente {
     @NotBlank(message = "Informe quem paga as sessões")
     private String nomePagador;
 
+    @CpfValido
     private String cpfPagador;
 
     @NotNull(message = "Informe o valor da sessão")

@@ -44,6 +44,25 @@ public class Cobranca {
 
     private LocalDate dataPagamento;
 
+    /**
+     * Situação na data informada: paga, atrasada (vencimento já passou) ou pendente
+     * (vence hoje ou depois). Recebe a data para poder ser testada sem depender do relógio.
+     */
+    public SituacaoCobranca situacaoEm(LocalDate hoje) {
+        if (status == StatusCobranca.PAGA) {
+            return SituacaoCobranca.PAGA;
+        }
+        return vencimento.isBefore(hoje) ? SituacaoCobranca.ATRASADA : SituacaoCobranca.PENDENTE;
+    }
+
+    /** Dias de atraso na data informada (zero se não estiver atrasada). */
+    public long diasEmAtraso(LocalDate hoje) {
+        if (situacaoEm(hoje) != SituacaoCobranca.ATRASADA) {
+            return 0;
+        }
+        return java.time.temporal.ChronoUnit.DAYS.between(vencimento, hoje);
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getCodigoPaciente() { return codigoPaciente; }

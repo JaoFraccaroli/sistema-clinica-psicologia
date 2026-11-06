@@ -34,8 +34,8 @@ public class DadosDeExemplo implements CommandLineRunner {
         if (!pacienteService.listar().isEmpty()) {
             return;
         }
-        Paciente ana = paciente("Ana Exemplo", "Ana Exemplo", "111.111.111-11", "150.00");
-        Paciente bruno = paciente("Bruno Exemplo", "Carla Exemplo (mãe)", "222.222.222-22", "180.00");
+        Paciente ana = paciente("Ana Exemplo", "Ana Exemplo", "111.444.777-35", "150.00");
+        Paciente bruno = paciente("Bruno Exemplo", "Carla Exemplo (mãe)", "123.456.789-09", "180.00");
 
         pacienteService.registrarSessao(ana.getId(), LocalDateTime.now().minusDays(7),
                 StatusSessao.REALIZADA, "Anotação fictícia de exemplo. Visível apenas na área clínica.");

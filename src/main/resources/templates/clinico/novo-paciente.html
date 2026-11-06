@@ -34,7 +34,8 @@
         </div>
         <div class="mb-3">
             <label for="cpfPagador" class="form-label">CPF de quem paga</label>
-            <input type="text" id="cpfPagador" th:field="*{cpfPagador}" class="form-control">
+            <input type="text" id="cpfPagador" th:field="*{cpfPagador}" class="form-control" placeholder="000.000.000-00">
+            <div class="text-danger" th:if="${#fields.hasErrors('cpfPagador')}" th:errors="*{cpfPagador}"></div>
         </div>
         <div class="mb-3">
             <label for="valorSessao" class="form-label">Valor da sessão (R$)</label>

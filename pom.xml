@@ -16,6 +16,12 @@
 	<properties>
 		<java.version>17</java.version>
 		<cucumber.version>7.20.1</cucumber.version>
+		<jacoco.version>0.8.12</jacoco.version>
+		<pitest.version>1.17.0</pitest.version>
+		<pitest-junit5.version>1.2.1</pitest-junit5.version>
+		<!-- Cobertura mínima de linhas (JaCoCo) e mutation score mínimo (PIT) -->
+		<cobertura.minima>0.80</cobertura.minima>
+		<mutacao.minima>80</mutacao.minima>
 		<!-- Cucumber 7.20 usa a JUnit Platform 1.11 -->
 		<junit-jupiter.version>5.11.3</junit-jupiter.version>
 	</properties>
@@ -92,6 +98,93 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+
+			<!-- Cobertura de testes: relatório em target/site/jacoco e mínimo obrigatório no "mvn verify" -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
+				<configuration>
+					<excludes>
+						<exclude>com/jaofraccaroli/clinica/ClinicaApplication.class</exclude>
+					</excludes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>preparar-agente</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>relatorio</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>cobertura-minima</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${cobertura.minima}</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Testes de mutação: mvn test-compile org.pitest:pitest-maven:mutationCoverage -->
+			<plugin>
+				<groupId>org.pitest</groupId>
+				<artifactId>pitest-maven</artifactId>
+				<version>${pitest.version}</version>
+				<dependencies>
+					<dependency>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-junit5-plugin</artifactId>
+						<version>${pitest-junit5.version}</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<!-- Regras de negócio sem Spring: rápidas para mutar -->
+					<targetClasses>
+						<param>com.jaofraccaroli.clinica.comum.*</param>
+						<param>com.jaofraccaroli.clinica.financeiro.Cobranca</param>
+						<param>com.jaofraccaroli.clinica.financeiro.CobrancaService</param>
+						<param>com.jaofraccaroli.clinica.financeiro.SituacaoCobranca</param>
+					</targetClasses>
+					<targetTests>
+						<param>com.jaofraccaroli.clinica.comum.*Test</param>
+						<param>com.jaofraccaroli.clinica.financeiro.*Test</param>
+						<param>com.jaofraccaroli.clinica.CobrancaServiceTest</param>
+					</targetTests>
+					<!-- getters e setters não têm regra para mutar -->
+					<excludedMethods>
+						<param>get*</param>
+						<param>set*</param>
+					</excludedMethods>
+					<mutationThreshold>${mutacao.minima}</mutationThreshold>
+					<outputFormats>
+						<param>HTML</param>
+						<param>XML</param>
+					</outputFormats>
+					<timestampedReports>false</timestampedReports>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

@@ -1,5 +1,6 @@
 package com.jaofraccaroli.clinica;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
@@ -186,6 +187,53 @@ class ControleDeAcessoTest {
                 .andExpect(redirectedUrl("/financeiro/cobrancas"));
     }
 
+    // ---------- Validação do CPF no cadastro ----------
+
+    @Test
+    void cadastroComCpfInvalidoVoltaParaOFormulario() throws Exception {
+        mockMvc.perform(post("/clinico/pacientes")
+                        .with(PSICOLOGA).with(csrf())
+                        .param("nome", "Paciente CPF")
+                        .param("nomePagador", "Responsável")
+                        .param("cpfPagador", "111.111.111-11")
+                        .param("valorSessao", "160.00"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("CPF inválido")));
+    }
+
+    @Test
+    void cpfSemPontuacaoEhGuardadoFormatado() {
+        Paciente p = new Paciente();
+        p.setNome("Paciente Formatação");
+        p.setNomePagador("Responsável");
+        p.setCpfPagador("11144477735");
+        p.setValorSessao(new BigDecimal("150.00"));
+
+        assertThat(pacienteService.cadastrar(p).getCpfPagador()).isEqualTo("111.444.777-35");
+    }
+
+    @Test
+    void cpfEmBrancoViraNulo() {
+        Paciente p = new Paciente();
+        p.setNome("Paciente Sem CPF");
+        p.setNomePagador("Responsável");
+        p.setCpfPagador("   ");
+        p.setValorSessao(new BigDecimal("150.00"));
+
+        assertThat(pacienteService.cadastrar(p).getCpfPagador()).isNull();
+    }
+
+    @Test
+    void telaDoFinanceiroMostraASituacaoDaCobranca() throws Exception {
+        Paciente paciente = novoPaciente("Paciente Atrasado");
+        cobrancaService.criar(paciente.getCodigo(), new BigDecimal("150.00"), LocalDate.now().minusDays(3));
+
+        mockMvc.perform(get("/financeiro/cobrancas").with(FINANCEIRO))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Atrasada")))
+                .andExpect(content().string(containsString("3 dias")));
+    }
+
     // ---------- Login e logout ----------
 
     @Test
@@ -226,7 +274,7 @@ class ControleDeAcessoTest {
         Paciente p = new Paciente();
         p.setNome(nome);
         p.setNomePagador("Pagador de " + nome.length());
-        p.setCpfPagador("000.000.000-00");
+        p.setCpfPagador("529.982.247-25");
         p.setValorSessao(new BigDecimal("150.00"));
         return pacienteService.cadastrar(p);
     }
