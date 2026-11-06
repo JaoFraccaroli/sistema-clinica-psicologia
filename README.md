@@ -52,8 +52,18 @@ Java 17, Spring Boot 3 (Web, Data JPA, Security, Validation), Thymeleaf, Bootstr
 
 ## Como rodar
 
+Só é preciso ter o **Java 17 ou mais novo**. O projeto traz o **Maven Wrapper** (`mvnw`), que baixa o Maven sozinho na primeira vez.
+
+No Windows (cmd ou PowerShell), dentro da pasta do projeto:
+
 ```bash
-mvn spring-boot:run
+mvnw spring-boot:run
+```
+
+No Linux ou macOS:
+
+```bash
+./mvnw spring-boot:run
 ```
 
 Acesse `http://localhost:8080`. Usuários de demonstração (com pacientes **fictícios**):
@@ -63,7 +73,9 @@ Acesse `http://localhost:8080`. Usuários de demonstração (com pacientes **fic
 | `psicologa` | `psicologa123` | Área clínica e financeira |
 | `financeiro` | `financeiro123` | Somente área financeira |
 
-As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCEIRO`. Por padrão o sistema usa um banco H2 em memória; para MySQL, rode com `-Dspring-boot.run.profiles=mysql` e configure `DB_URL`, `DB_USER` e `DB_PASSWORD`.
+As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCEIRO`. Por padrão o sistema usa um banco H2 em memória (os dados somem ao parar a aplicação); para MySQL, rode com `mvnw spring-boot:run -Dspring-boot.run.profiles=mysql` e configure `DB_URL`, `DB_USER` e `DB_PASSWORD`.
+
+Para rodar os testes: `mvnw test`.
 
 ## Próximos passos
 
