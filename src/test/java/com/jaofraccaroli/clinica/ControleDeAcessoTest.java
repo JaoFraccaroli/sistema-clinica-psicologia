@@ -2,6 +2,7 @@ package com.jaofraccaroli.clinica;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -124,6 +125,42 @@ class ControleDeAcessoTest {
                         .param("valorSessao", "160.00"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Informe o nome")));
+    }
+
+    // ---------- Login e logout ----------
+
+    @Test
+    void telaDeLoginAbreEmPortugues() throws Exception {
+        mockMvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Entre com o seu usuário")));
+    }
+
+    @Test
+    void loginComSenhaCertaVaiParaOInicio() throws Exception {
+        mockMvc.perform(formLogin().user("psicologa").password("senha-teste-psicologa"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"));
+    }
+
+    @Test
+    void loginComSenhaErradaMostraErro() throws Exception {
+        mockMvc.perform(formLogin().user("psicologa").password("errada"))
+                .andExpect(redirectedUrl("/login?error"));
+        mockMvc.perform(get("/login").param("error", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Usuário ou senha inválidos")));
+    }
+
+    @Test
+    void sairLevaParaOLoginComAviso() throws Exception {
+        // Defeito encontrado: depois de sair, /login?logout dava 404
+        mockMvc.perform(post("/logout").with(PSICOLOGA).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?logout"));
+        mockMvc.perform(get("/login").param("logout", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Você saiu do sistema")));
     }
 
     private Paciente novoPaciente(String nome) {

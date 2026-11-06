@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Entrar')}"></head>
+<body class="bg-light">
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 100vh">
+    <div class="card shadow-sm" style="width: 100%; max-width: 380px">
+        <div class="card-body p-4">
+            <h1 class="h4 mb-1 text-center">Clínica de Psicologia</h1>
+            <p class="text-muted text-center mb-4">Entre com o seu usuário</p>
+
+            <div th:if="${param.error}" class="alert alert-danger" data-testid="erro-login">
+                Usuário ou senha inválidos.
+            </div>
+            <div th:if="${param.logout}" class="alert alert-success" data-testid="saiu">
+                Você saiu do sistema.
+            </div>
+
+            <form th:action="@{/login}" method="post">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Usuário</label>
+                    <input type="text" id="username" name="username" class="form-control" autocomplete="username" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Senha</label>
+                    <input type="password" id="password" name="password" class="form-control" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Entrar</button>
+            </form>
+
+            <p class="text-muted small mt-4 mb-0">
+                Demonstração: <code>psicologa</code> / <code>psicologa123</code>
+                ou <code>financeiro</code> / <code>financeiro123</code>
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

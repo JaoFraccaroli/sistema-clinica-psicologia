@@ -28,7 +28,10 @@ public class SegurancaConfig {
                 .requestMatchers("/clinico/**").hasRole("PSICOLOGA")
                 .requestMatchers("/financeiro/**").hasAnyRole("PSICOLOGA", "FINANCEIRO")
                 .anyRequest().authenticated())
-            .formLogin(login -> login.defaultSuccessUrl("/", true).permitAll())
+            .formLogin(login -> login
+                .loginPage("/login")
+                .defaultSuccessUrl("/", true)
+                .permitAll())
             .logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll());
         return http.build();
     }
