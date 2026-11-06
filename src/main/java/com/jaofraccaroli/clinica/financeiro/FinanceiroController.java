@@ -1,9 +1,14 @@
 package com.jaofraccaroli.clinica.financeiro;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,9 +24,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class FinanceiroController {
 
     private final CobrancaService cobrancaService;
+    private final ExportadorCsvCobrancas exportador;
 
-    public FinanceiroController(CobrancaService cobrancaService) {
+    public FinanceiroController(CobrancaService cobrancaService, ExportadorCsvCobrancas exportador) {
         this.cobrancaService = cobrancaService;
+        this.exportador = exportador;
     }
 
     @GetMapping
@@ -32,6 +39,20 @@ public class FinanceiroController {
         model.addAttribute("podeEditar", podeEditar);
         model.addAttribute("hoje", LocalDate.now());
         return "financeiro/cobrancas";
+    }
+
+    /** Baixa a planilha das cobranças (.csv, abre no Excel). Só dados financeiros. */
+    @GetMapping("/exportar")
+    public ResponseEntity<byte[]> exportar() {
+        LocalDate hoje = LocalDate.now();
+        byte[] csv = exportador.gerar(cobrancaService.listar(), hoje).getBytes(StandardCharsets.UTF_8);
+        ContentDisposition anexo = ContentDisposition.attachment()
+                .filename("cobrancas-" + hoje + ".csv")
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, anexo.toString())
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .body(csv);
     }
 
     @GetMapping("/nova")

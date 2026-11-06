@@ -167,6 +167,7 @@
 						<param>com.jaofraccaroli.clinica.financeiro.Cobranca</param>
 						<param>com.jaofraccaroli.clinica.financeiro.CobrancaService</param>
 						<param>com.jaofraccaroli.clinica.financeiro.SituacaoCobranca</param>
+						<param>com.jaofraccaroli.clinica.financeiro.ExportadorCsvCobrancas</param>
 					</targetClasses>
 					<targetTests>
 						<param>com.jaofraccaroli.clinica.comum.*Test</param>

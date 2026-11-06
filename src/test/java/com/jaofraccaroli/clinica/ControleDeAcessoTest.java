@@ -9,11 +9,13 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -232,6 +234,61 @@ class ControleDeAcessoTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Atrasada")))
                 .andExpect(content().string(containsString("3 dias")));
+    }
+
+    // ---------- Exportar planilha ----------
+
+    @Test
+    void financeiroBaixaAPlanilhaDeCobrancas() throws Exception {
+        Paciente paciente = novoPaciente("Paciente Planilha");
+        cobrancaService.criar(paciente.getCodigo(), new BigDecimal("150.00"), LocalDate.now().plusDays(5));
+
+        String csv = mockMvc.perform(get("/financeiro/cobrancas/exportar").with(FINANCEIRO))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", containsString("text/csv")))
+                .andExpect(header().string("Content-Disposition",
+                        containsString("attachment; filename=\"cobrancas-" + LocalDate.now() + ".csv\"")))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(csv).startsWith("\uFEFFCódigo do paciente;Pagador;CPF do pagador;");
+        assertThat(csv).contains(paciente.getCodigo() + ";Pagador de 17;529.982.247-25;150,00;");
+    }
+
+    @Test
+    void psicologaTambemBaixaAPlanilha() throws Exception {
+        mockMvc.perform(get("/financeiro/cobrancas/exportar").with(PSICOLOGA))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void visitanteSemLoginNaoBaixaAPlanilha() throws Exception {
+        mockMvc.perform(get("/financeiro/cobrancas/exportar"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("**/login"));
+    }
+
+    @Test
+    void planilhaNaoLevaDadosClinicos() throws Exception {
+        Paciente paciente = novoPaciente("Nome Clinico Secreto");
+        pacienteService.registrarSessao(paciente.getId(), LocalDateTime.now().minusDays(1),
+                StatusSessao.REALIZADA, "ANOTACAO-SIGILOSA-DA-SESSAO");
+        cobrancaService.criar(paciente.getCodigo(), new BigDecimal("150.00"), LocalDate.now());
+
+        String csv = mockMvc.perform(get("/financeiro/cobrancas/exportar").with(FINANCEIRO))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(csv).contains(paciente.getCodigo())
+                .doesNotContain("Nome Clinico Secreto")
+                .doesNotContain("ANOTACAO-SIGILOSA-DA-SESSAO");
+    }
+
+    @Test
+    void botaoDeExportarApareceParaOsDoisPerfis() throws Exception {
+        mockMvc.perform(get("/financeiro/cobrancas").with(FINANCEIRO))
+                .andExpect(content().string(containsString("Exportar planilha")));
+        mockMvc.perform(get("/financeiro/cobrancas").with(PSICOLOGA))
+                .andExpect(content().string(containsString("Exportar planilha")));
     }
 
     // ---------- Login e logout ----------

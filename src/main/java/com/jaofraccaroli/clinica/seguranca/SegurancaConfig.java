@@ -28,8 +28,9 @@ public class SegurancaConfig {
             .authorizeHttpRequests(acesso -> acesso
                 .requestMatchers("/login", "/error").permitAll()
                 .requestMatchers("/clinico/**").hasRole("PSICOLOGA")
-                // A psicóloga só pode ver a lista de cobranças
-                .requestMatchers(HttpMethod.GET, "/financeiro/cobrancas").hasAnyRole("PSICOLOGA", "FINANCEIRO")
+                // A psicóloga só pode ver a lista de cobranças e baixar a planilha
+                .requestMatchers(HttpMethod.GET, "/financeiro/cobrancas", "/financeiro/cobrancas/exportar")
+                    .hasAnyRole("PSICOLOGA", "FINANCEIRO")
                 // Criar cobrança e registrar pagamento: somente o financeiro
                 .requestMatchers("/financeiro/**").hasRole("FINANCEIRO")
                 .anyRequest().authenticated())

@@ -29,6 +29,7 @@ Aqui a separação é feita no próprio sistema:
 | Ver a lista de cobranças | ✅ (modo somente leitura) | ✅ |
 | Criar cobrança | ❌ (403) | ✅ |
 | Registrar pagamento | ❌ (403) | ✅ |
+| Exportar planilha das cobranças | ✅ | ✅ |
 
 ## Como a separação funciona
 
@@ -47,6 +48,8 @@ As mesmas técnicas dos exercícios de Python do repositório [estudos-qualidade
 | **Testes dirigidos por dados** | JUnit `@CsvFileSource` | [`cpfs.csv`](src/test/resources/dados/cpfs.csv): 23 casos de CPF (válidos, dígito errado, todos iguais, tamanho, formatação, letras, vazio), cada um com o motivo, lidos por [`ValidadorCpfTest`](src/test/java/com/jaofraccaroli/clinica/comum/ValidadorCpfTest.java) |
 | **Valores de fronteira** | JUnit `@ParameterizedTest` | [`SituacaoCobrancaTest`](src/test/java/com/jaofraccaroli/clinica/financeiro/SituacaoCobrancaTest.java): vence ontem, hoje e amanhã; [`CobrancaServiceTest`](src/test/java/com/jaofraccaroli/clinica/CobrancaServiceTest.java): valor -0,01, 0 e 0,01 |
 | **Testes de segurança e de integração** | MockMvc + Spring Security Test | [`ControleDeAcessoTest`](src/test/java/com/jaofraccaroli/clinica/ControleDeAcessoTest.java): 403 para cada acesso proibido, inclusive enviando o formulário direto; login, senha inválida e sair |
+| **Segurança dos dados exportados** | JUnit | [`ExportadorCsvCobrancasTest`](src/test/java/com/jaofraccaroli/clinica/financeiro/ExportadorCsvCobrancasTest.java): a planilha só tem colunas financeiras, e textos como `=SOMA(...)` não viram fórmula no Excel (injeção de CSV) |
+| **Persistência** | Spring Boot | [`PersistenciaEmArquivoTest`](src/test/java/com/jaofraccaroli/clinica/PersistenciaEmArquivoTest.java): liga a aplicação, cadastra, desliga, liga de novo e confere que nada sumiu nem foi duplicado |
 | **Mocks** | Mockito | `CobrancaServiceTest`: regras de cobrança sem banco de dados |
 | **Regra de arquitetura** | JUnit | [`SeparacaoDeModulosTest`](src/test/java/com/jaofraccaroli/clinica/SeparacaoDeModulosTest.java): o financeiro não pode depender da área clínica |
 | **Cobertura** | JaCoCo | `mvn verify` falha se a cobertura de linhas ficar abaixo de 85% |
@@ -93,7 +96,16 @@ Usuários de demonstração (com pacientes **fictícios**):
 | `psicologa` | `psicologa123` | Área clínica e consulta do financeiro |
 | `financeiro` | `financeiro123` | Somente área financeira |
 
-As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCEIRO`. Por padrão o sistema usa um banco H2 em memória (os dados somem ao parar a aplicação); para MySQL, use o perfil `mysql` e configure `DB_URL`, `DB_USER` e `DB_PASSWORD`.
+As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCEIRO`.
+
+### Onde ficam os dados
+
+- **Banco H2 em arquivo**: tudo fica em `dados/clinica.mv.db`, dentro da pasta do projeto, e **continua lá depois de reiniciar**. Os pacientes fictícios só são criados na primeira vez.
+- **Começar do zero**: pare a aplicação e apague a pasta `dados`.
+- A pasta `dados` está no `.gitignore`, então **nunca vai para o GitHub**.
+- **Planilha**: na tela de cobranças, o botão **Exportar planilha** baixa um `.csv` que abre no Excel, com código do paciente, pagador, CPF, valor, vencimento, situação e data do pagamento. **Nenhum dado clínico** vai para a planilha. Ela é uma cópia para consulta: quem guarda os dados é o banco.
+- **Testes** usam um banco separado, em memória, e não mexem nos seus dados.
+- **MySQL**: use o perfil `mysql` e configure `DB_URL`, `DB_USER` e `DB_PASSWORD`.
 
 ## Próximos passos
 
