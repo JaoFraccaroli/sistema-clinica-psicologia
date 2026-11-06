@@ -34,3 +34,20 @@ jobs:
             target/pit-reports/
             target/relatorio-cucumber.html
           if-no-files-found: ignore
+
+  # Confere que os testes também rodam nas versões novas do Java (como no VS Code)
+  java-mais-novo:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: ["21", "25"]
+    name: Testes no Java ${{ matrix.java }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      - name: Testes (JUnit + Cucumber)
+        run: mvn -B verify
