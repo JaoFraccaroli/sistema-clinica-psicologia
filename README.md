@@ -2,7 +2,11 @@
 
 ![Testes](https://github.com/JaoFraccaroli/sistema-clinica-psicologia/actions/workflows/testes.yml/badge.svg)
 
-Sistema web para uma clínica de psicologia com **área clínica e área financeira separadas**.
+Sistema web para uma clínica de psicologia com **área clínica e área financeira separadas**, usado como projeto de **Qualidade de Software em Java**: testes de unidade, BDD, valores de fronteira, testes dirigidos por dados, cobertura e testes de mutação, tudo rodando no GitHub Actions a cada push.
+
+| Testes | Cobertura de linhas (JaCoCo) | Mutation score (PIT) |
+|---|---|---|
+| 107, todos passando | 87,1% (mínimo exigido: 85%) | 100%, 53 de 53 mutantes mortos (mínimo exigido: 90%) |
 
 ## Por que separar?
 
@@ -33,65 +37,69 @@ Aqui a separação é feita no próprio sistema:
 - **Uma única porta de saída**: o financeiro só recebe `DadosFaturamento` (código do paciente, nome e CPF de quem paga, valor da sessão), pela interface `FonteDeDadosFaturamento`. Quem implementa essa interface é a área clínica, que decide o que pode sair de lá.
 - **Regra de arquitetura testada**: um teste falha se algum arquivo do módulo financeiro passar a usar código da área clínica.
 
-## Testes
+## Técnicas de QA aplicadas
 
-| Tipo | O que verifica |
-|---|---|
-| **BDD (Cucumber, em português)** | `src/test/resources/features/separacao_dos_dados.feature`: o que cada perfil pode acessar e que a tela do financeiro não mostra anotações das sessões |
-| **Controle de acesso (MockMvc + Spring Security Test)** | Financeiro recebe 403 na área clínica; psicóloga recebe 403 ao criar cobrança ou registrar pagamento, mesmo enviando o formulário direto; login, senha inválida e sair; validação do cadastro |
-| **Regras de negócio (JUnit + Mockito)** | Cobrança com valor zero ou negativo, paciente inexistente, pagamento em dobro |
-| **Arquitetura** | Financeiro não depende da área clínica e só recebe os campos permitidos |
+As mesmas técnicas dos exercícios de Python do repositório [estudos-qualidade-software](https://github.com/JaoFraccaroli/estudos-qualidade-software), agora em Java e aplicadas a regras reais do sistema:
 
-Exemplo de cenário:
+| Técnica | Ferramenta | Onde está |
+|---|---|---|
+| **BDD** (cenários em português) | Cucumber | [`separacao_dos_dados.feature`](src/test/resources/features/separacao_dos_dados.feature): o que cada perfil pode acessar, e que o financeiro não vê anotações das sessões |
+| **Testes dirigidos por dados** | JUnit `@CsvFileSource` | [`cpfs.csv`](src/test/resources/dados/cpfs.csv): 23 casos de CPF (válidos, dígito errado, todos iguais, tamanho, formatação, letras, vazio), cada um com o motivo, lidos por [`ValidadorCpfTest`](src/test/java/com/jaofraccaroli/clinica/comum/ValidadorCpfTest.java) |
+| **Valores de fronteira** | JUnit `@ParameterizedTest` | [`SituacaoCobrancaTest`](src/test/java/com/jaofraccaroli/clinica/financeiro/SituacaoCobrancaTest.java): vence ontem, hoje e amanhã; [`CobrancaServiceTest`](src/test/java/com/jaofraccaroli/clinica/CobrancaServiceTest.java): valor -0,01, 0 e 0,01 |
+| **Testes de segurança e de integração** | MockMvc + Spring Security Test | [`ControleDeAcessoTest`](src/test/java/com/jaofraccaroli/clinica/ControleDeAcessoTest.java): 403 para cada acesso proibido, inclusive enviando o formulário direto; login, senha inválida e sair |
+| **Mocks** | Mockito | `CobrancaServiceTest`: regras de cobrança sem banco de dados |
+| **Regra de arquitetura** | JUnit | [`SeparacaoDeModulosTest`](src/test/java/com/jaofraccaroli/clinica/SeparacaoDeModulosTest.java): o financeiro não pode depender da área clínica |
+| **Cobertura** | JaCoCo | `mvn verify` falha se a cobertura de linhas ficar abaixo de 85% |
+| **Testes de mutação** | PIT (Pitest) | Altera o código das regras de negócio (troca `<` por `<=`, inverte condições, troca retornos) e confere se algum teste falha. Abaixo de 90% de mutantes mortos, o build falha |
+| **Evidências e métricas** | GitHub Actions | Cada execução publica um resumo (testes, cobertura e mutation score) e os relatórios HTML para baixar |
 
-```gherkin
-Cenário: O financeiro vê o código do paciente, mas não as anotações das sessões
-  Dado que existe um paciente com a anotação de sessão "Relato sigiloso de teste"
-  E existe uma cobrança para esse paciente
-  E que estou logado como "financeiro"
-  Quando eu acesso "/financeiro/cobrancas"
-  Então a página deve mostrar o código do paciente
-  E a página não deve conter "Relato sigiloso de teste"
-```
+### Defeitos encontrados pelos testes
 
-Os testes rodam no GitHub Actions a cada push, e o relatório do Cucumber fica nos artefatos da execução.
+| Defeito | Como foi encontrado | Correção |
+|---|---|---|
+| Ao clicar em **Sair**, a página `/login?logout` dava erro 404 | Teste manual; depois reproduzido simulando o navegador no GitHub Actions | Tela de login própria, em português, com testes de login e logout |
+| `CobrancaService.listar()` e `pacientesParaCobranca()` sem teste de unidade | **PIT**: 2 mutantes "sem cobertura" | Testes de unidade novos; mutation score foi de 96% para 100% |
+| Entidades trocadas nos repositórios, classe principal faltando, tela com nome errado | Revisão do projeto original | Ver o histórico de commits |
+
+### Como ver os relatórios
+
+No GitHub, abra a aba **Actions**, entre na execução mais recente e baixe o artefato **relatorios-de-qualidade**. Ele contém:
+- `site/jacoco/index.html`: cobertura linha a linha
+- `pit-reports/index.html`: cada mutante e o teste que o matou
+- `relatorio-cucumber.html`: os cenários BDD
 
 ## Tecnologias
 
-Java 17, Spring Boot 3 (Web, Data JPA, Security, Validation), Thymeleaf, Bootstrap 5, H2/MySQL, JUnit 5, Mockito, Cucumber.
+Java 17, Spring Boot 3 (Web, Data JPA, Security, Validation), Thymeleaf, Bootstrap 5, H2/MySQL, JUnit 5, Mockito, Cucumber, JaCoCo e PIT.
 
 ## Como rodar
 
-Só é preciso ter o **Java 17 ou mais novo**. O projeto traz o **Maven Wrapper** (`mvnw`), que baixa o Maven sozinho na primeira vez.
+É preciso ter o **Java 17 ou mais novo**.
 
-No Windows (cmd ou PowerShell), dentro da pasta do projeto:
+**Pelo VS Code (mais fácil):** com a extensão *Extension Pack for Java* instalada, abra a pasta do projeto, abra `ClinicaApplication.java` e clique em **Run**. O VS Code baixa as dependências sozinho.
 
-```bash
-mvnw spring-boot:run
-```
-
-No Linux ou macOS:
+**Pelo terminal (precisa do Maven instalado):**
 
 ```bash
-./mvnw spring-boot:run
+mvn spring-boot:run          # sobe a aplicação em http://localhost:8080
+mvn verify                   # testes + relatório e cobertura mínima (JaCoCo)
+mvn test-compile org.pitest:pitest-maven:mutationCoverage   # testes de mutação (PIT)
 ```
 
-Acesse `http://localhost:8080`. Usuários de demonstração (com pacientes **fictícios**):
+Usuários de demonstração (com pacientes **fictícios**):
 
 | Usuário | Senha | Perfil |
 |---|---|---|
 | `psicologa` | `psicologa123` | Área clínica e consulta do financeiro |
 | `financeiro` | `financeiro123` | Somente área financeira |
 
-As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCEIRO`. Por padrão o sistema usa um banco H2 em memória (os dados somem ao parar a aplicação); para MySQL, rode com `mvnw spring-boot:run -Dspring-boot.run.profiles=mysql` e configure `DB_URL`, `DB_USER` e `DB_PASSWORD`.
-
-Para rodar os testes: `mvnw test`.
+As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCEIRO`. Por padrão o sistema usa um banco H2 em memória (os dados somem ao parar a aplicação); para MySQL, use o perfil `mysql` e configure `DB_URL`, `DB_USER` e `DB_PASSWORD`.
 
 ## Próximos passos
 
 - Bancos de dados separados para cada área (hoje são tabelas separadas no mesmo banco)
 - Registro de quem acessou cada prontuário (auditoria)
-- Emissão de recibos pela área financeira
+- Emissão de recibos pela área financeira (o CPF do pagador já é validado)
 
 ## Histórico
 

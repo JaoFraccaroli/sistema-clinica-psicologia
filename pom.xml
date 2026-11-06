@@ -20,8 +20,8 @@
 		<pitest.version>1.17.0</pitest.version>
 		<pitest-junit5.version>1.2.1</pitest-junit5.version>
 		<!-- Cobertura mínima de linhas (JaCoCo) e mutation score mínimo (PIT) -->
-		<cobertura.minima>0.80</cobertura.minima>
-		<mutacao.minima>80</mutacao.minima>
+		<cobertura.minima>0.85</cobertura.minima>
+		<mutacao.minima>90</mutacao.minima>
 		<!-- Cucumber 7.20 usa a JUnit Platform 1.11 -->
 		<junit-jupiter.version>5.11.3</junit-jupiter.version>
 	</properties>
