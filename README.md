@@ -2,11 +2,11 @@
 
 ![Testes](https://github.com/JaoFraccaroli/sistema-clinica-psicologia/actions/workflows/testes.yml/badge.svg)
 
-Sistema web para uma clínica de psicologia com **área clínica e área financeira separadas**, usado como projeto de **Qualidade de Software em Java**: testes de unidade, BDD, valores de fronteira, testes dirigidos por dados, cobertura e testes de mutação, tudo rodando no GitHub Actions a cada push.
+Sistema web para uma clínica de psicologia com **área clínica, área financeira e área do paciente separadas**, usado como projeto de **Qualidade de Software em Java**: testes de unidade, BDD, valores de fronteira, testes dirigidos por dados, cobertura e testes de mutação, tudo rodando no GitHub Actions a cada push.
 
 | Testes | Cobertura de linhas (JaCoCo) | Mutation score (PIT) |
 |---|---|---|
-| 107, todos passando | 87,1% (mínimo exigido: 85%) | 100%, 53 de 53 mutantes mortos (mínimo exigido: 90%) |
+| 331, todos passando (75 cenários BDD) | 97,9% (mínimo exigido: 85%) | 100%, 128 de 128 mutantes mortos (mínimo exigido: 90%) |
 
 ## Por que separar?
 
@@ -22,14 +22,23 @@ Aqui a separação é feita no próprio sistema:
 
 ### Permissões de cada perfil
 
-| Ação | `psicologa` | `financeiro` |
-|---|---|---|
-| Ver pacientes e prontuário | ✅ | ❌ (403) |
-| Registrar sessões | ✅ | ❌ (403) |
-| Ver a lista de cobranças | ✅ (modo somente leitura) | ✅ |
-| Criar cobrança | ❌ (403) | ✅ |
-| Registrar pagamento | ❌ (403) | ✅ |
-| Exportar planilha das cobranças | ✅ | ✅ |
+| Ação | `psicologa` | `financeiro` | paciente |
+|---|---|---|---|
+| Ver pacientes e prontuário | ✅ | ❌ (403) | ❌ (403) |
+| Registrar sessões | ✅ | ❌ (403) | ❌ (403) |
+| Criar o acesso (senha) do paciente | ✅ | ❌ (403) | ❌ (403) |
+| Ver a lista de cobranças | ✅ (modo somente leitura) | ✅ | ❌ (403) |
+| Criar cobrança | ❌ (403) | ✅ | ❌ (403) |
+| Registrar pagamento | ❌ (403) | ✅ | ❌ (403) |
+| Exportar planilha das cobranças | ✅ | ✅ | ❌ (403) |
+| Ver as **próprias** sessões e cobranças | ❌ (403) | ❌ (403) | ✅ (sem as anotações) |
+
+### Área do paciente
+
+- **Login:** o usuário é o **código do paciente** (ex.: `PAC-1A2B3C4D`). No prontuário, a psicóloga clica em **Criar acesso do paciente** e o sistema gera uma senha aleatória de 10 caracteres, mostrada **uma única vez** para ela entregar ao paciente.
+- **Senha:** fica guardada só como hash BCrypt, numa tabela separada do cadastro clínico. Gerar uma nova senha faz a antiga parar de funcionar.
+- **O que o paciente vê:** próximas sessões, sessões anteriores (data e situação) e as próprias cobranças, com o total em aberto. **Nunca vê as anotações** das sessões, nem dados de outros pacientes.
+- **Segurança:** o código do paciente vem do login, nunca da URL. Por isso trocar parâmetros no endereço não mostra dados de outra pessoa (teste de IDOR).
 
 ## Como a separação funciona
 
@@ -44,14 +53,14 @@ As mesmas técnicas dos exercícios de Python do repositório [estudos-qualidade
 
 | Técnica | Ferramenta | Onde está |
 |---|---|---|
-| **BDD** (cenários em português) | Cucumber | [`separacao_dos_dados.feature`](src/test/resources/features/separacao_dos_dados.feature): o que cada perfil pode acessar, e que o financeiro não vê anotações das sessões |
+| **BDD** (cenários em português) | Cucumber | 4 funcionalidades e 75 cenários em [`features`](src/test/resources/features): [separação dos dados](src/test/resources/features/separacao_dos_dados.feature), [área do paciente](src/test/resources/features/area_do_paciente.feature), [cobranças](src/test/resources/features/cobrancas.feature) e [login](src/test/resources/features/login.feature) |
 | **Testes dirigidos por dados** | JUnit `@CsvFileSource` | [`cpfs.csv`](src/test/resources/dados/cpfs.csv): 23 casos de CPF (válidos, dígito errado, todos iguais, tamanho, formatação, letras, vazio), cada um com o motivo, lidos por [`ValidadorCpfTest`](src/test/java/com/jaofraccaroli/clinica/comum/ValidadorCpfTest.java) |
 | **Valores de fronteira** | JUnit `@ParameterizedTest` | [`SituacaoCobrancaTest`](src/test/java/com/jaofraccaroli/clinica/financeiro/SituacaoCobrancaTest.java): vence ontem, hoje e amanhã; [`CobrancaServiceTest`](src/test/java/com/jaofraccaroli/clinica/CobrancaServiceTest.java): valor -0,01, 0 e 0,01 |
-| **Testes de segurança e de integração** | MockMvc + Spring Security Test | [`ControleDeAcessoTest`](src/test/java/com/jaofraccaroli/clinica/ControleDeAcessoTest.java): 403 para cada acesso proibido, inclusive enviando o formulário direto; login, senha inválida e sair |
+| **Testes de segurança e de integração** | MockMvc + Spring Security Test | [`ControleDeAcessoTest`](src/test/java/com/jaofraccaroli/clinica/ControleDeAcessoTest.java) e [`AreaDoPacienteTest`](src/test/java/com/jaofraccaroli/clinica/AreaDoPacienteTest.java): 403 para cada acesso proibido, inclusive enviando o formulário direto; requisição sem token CSRF; paciente tentando ver outro paciente (IDOR); senha guardada só como hash; senha antiga invalidada; login, senha inválida e sair |
 | **Segurança dos dados exportados** | JUnit | [`ExportadorCsvCobrancasTest`](src/test/java/com/jaofraccaroli/clinica/financeiro/ExportadorCsvCobrancasTest.java): a planilha só tem colunas financeiras, e textos como `=SOMA(...)` não viram fórmula no Excel (injeção de CSV) |
 | **Persistência** | Spring Boot | [`PersistenciaEmArquivoTest`](src/test/java/com/jaofraccaroli/clinica/PersistenciaEmArquivoTest.java): liga a aplicação, cadastra, desliga, liga de novo e confere que nada sumiu nem foi duplicado |
 | **Mocks** | Mockito | `CobrancaServiceTest`: regras de cobrança sem banco de dados |
-| **Regra de arquitetura** | JUnit | [`SeparacaoDeModulosTest`](src/test/java/com/jaofraccaroli/clinica/SeparacaoDeModulosTest.java): o financeiro não pode depender da área clínica |
+| **Regra de arquitetura** | JUnit | [`SeparacaoDeModulosTest`](src/test/java/com/jaofraccaroli/clinica/SeparacaoDeModulosTest.java): o financeiro não pode depender da área clínica, e a área do paciente não pode ler as anotações das sessões |
 | **Cobertura** | JaCoCo | `mvn verify` falha se a cobertura de linhas ficar abaixo de 85% |
 | **Testes de mutação** | PIT (Pitest) | Altera o código das regras de negócio (troca `<` por `<=`, inverte condições, troca retornos) e confere se algum teste falha. Abaixo de 90% de mutantes mortos, o build falha |
 | **Evidências e métricas** | GitHub Actions | Cada execução publica um resumo (testes, cobertura e mutation score) e os relatórios HTML para baixar |
@@ -95,6 +104,7 @@ Usuários de demonstração (com pacientes **fictícios**):
 |---|---|---|
 | `psicologa` | `psicologa123` | Área clínica e consulta do financeiro |
 | `financeiro` | `financeiro123` | Somente área financeira |
+| `PAC-DEMO0001` | `paciente123` | Paciente fictícia Ana: área do paciente |
 
 As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCEIRO`.
 
@@ -109,6 +119,8 @@ As senhas podem ser trocadas pelas variáveis `SENHA_PSICOLOGA` e `SENHA_FINANCE
 
 ## Próximos passos
 
+- Paciente trocar a própria senha no primeiro acesso
+- Bloquear o login depois de várias senhas erradas seguidas
 - Bancos de dados separados para cada área (hoje são tabelas separadas no mesmo banco)
 - Registro de quem acessou cada prontuário (auditoria)
 - Emissão de recibos pela área financeira (o CPF do pagador já é validado)
