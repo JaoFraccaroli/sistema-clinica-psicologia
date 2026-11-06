@@ -33,11 +33,36 @@ class SeparacaoDeModulosTest {
     }
 
     @Test
+    void areaDoPacienteNuncaLeAsAnotacoesDasSessoes() throws IOException {
+        try (Stream<Path> arquivos = Files.walk(Path.of("src/main/java/com/jaofraccaroli/clinica/portal"))) {
+            List<Path> violacoes = arquivos
+                    .filter(p -> p.toString().endsWith(".java"))
+                    .filter(p -> conteudo(p).contains("getAnotacoes"))
+                    .toList();
+            assertThat(violacoes).as("Arquivos da área do paciente que leem anotações clínicas").isEmpty();
+        }
+    }
+
+    @Test
+    void telaDoPacienteNaoUsaAnotacoes() throws IOException {
+        assertThat(Files.readString(Path.of("src/main/resources/templates/paciente/inicio.html")))
+                .doesNotContain("anotac");
+    }
+
+    @Test
     void dadosDeFaturamentoTemApenasCamposPermitidos() {
         List<String> campos = Arrays.stream(DadosFaturamento.class.getRecordComponents())
                 .map(c -> c.getName())
                 .toList();
         assertThat(campos).containsExactly("codigoPaciente", "nomePagador", "cpfPagador", "valorSessao");
+    }
+
+    private static String conteudo(Path arquivo) {
+        try {
+            return Files.readString(arquivo);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static boolean citaAreaClinica(Path arquivo) {

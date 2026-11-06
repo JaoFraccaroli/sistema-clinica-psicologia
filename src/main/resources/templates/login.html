@@ -17,7 +17,7 @@
 
             <form th:action="@{/login}" method="post">
                 <div class="mb-3">
-                    <label for="username" class="form-label">Usuário</label>
+                    <label for="username" class="form-label">Usuário ou código do paciente</label>
                     <input type="text" id="username" name="username" class="form-control" autocomplete="username" required autofocus>
                 </div>
                 <div class="mb-3">
@@ -28,8 +28,9 @@
             </form>
 
             <p class="text-muted small mt-4 mb-0">
-                Demonstração: <code>psicologa</code> / <code>psicologa123</code>
-                ou <code>financeiro</code> / <code>financeiro123</code>
+                Demonstração: <code>psicologa</code> / <code>psicologa123</code>,
+                <code>financeiro</code> / <code>financeiro123</code>
+                ou, como paciente, <code>PAC-DEMO0001</code> / <code>paciente123</code>
             </p>
         </div>
     </div>

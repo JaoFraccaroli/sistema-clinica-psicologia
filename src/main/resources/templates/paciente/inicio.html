@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: head('Minha área')}"></head>
+<body>
+<nav th:replace="~{fragmentos :: menu('paciente')}"></nav>
+<div class="container" style="max-width: 860px">
+    <h1 class="h3">Olá, <span th:text="${resumo.nome}" data-testid="nome-paciente">Paciente</span></h1>
+    <p class="text-muted">Seu código: <code th:text="${resumo.codigo}" data-testid="codigo-paciente"></code></p>
+
+    <div class="row g-4 mt-1">
+        <div class="col-md-6">
+            <h2 class="h5">Próximas sessões</h2>
+            <p th:if="${#lists.isEmpty(resumo.proximasSessoes)}" class="text-muted" data-testid="sem-proximas">Nenhuma sessão agendada.</p>
+            <ul class="list-group" th:unless="${#lists.isEmpty(resumo.proximasSessoes)}">
+                <li class="list-group-item d-flex justify-content-between" th:each="s : ${resumo.proximasSessoes}" data-testid="proxima-sessao">
+                    <span th:text="${#temporals.format(s.dataHora, 'dd/MM/yyyy HH:mm')}"></span>
+                    <span class="badge text-bg-primary" th:text="${s.status}"></span>
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h2 class="h5">Sessões anteriores</h2>
+            <p th:if="${#lists.isEmpty(resumo.sessoesAnteriores)}" class="text-muted">Nenhuma sessão anterior.</p>
+            <ul class="list-group" th:unless="${#lists.isEmpty(resumo.sessoesAnteriores)}">
+                <li class="list-group-item d-flex justify-content-between" th:each="s : ${resumo.sessoesAnteriores}" data-testid="sessao-anterior">
+                    <span th:text="${#temporals.format(s.dataHora, 'dd/MM/yyyy HH:mm')}"></span>
+                    <span class="badge text-bg-light" th:text="${s.status}"></span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-4">Minhas cobranças</h2>
+    <p th:if="${#lists.isEmpty(resumo.cobrancas)}" class="text-muted" data-testid="sem-cobrancas">Nenhuma cobrança.</p>
+    <table class="table" th:unless="${#lists.isEmpty(resumo.cobrancas)}">
+        <thead><tr><th>Vencimento</th><th>Valor</th><th>Situação</th><th>Pago em</th></tr></thead>
+        <tbody>
+        <tr th:each="c : ${resumo.cobrancas}" data-testid="cobranca">
+            <td th:text="${#temporals.format(c.vencimento, 'dd/MM/yyyy')}"></td>
+            <td th:text="'R$ ' + ${#numbers.formatDecimal(c.valor, 1, 'POINT', 2, 'COMMA')}"></td>
+            <td><span class="badge" th:classappend="${c.atrasada} ? 'text-bg-danger' : (${c.dataPagamento != null} ? 'text-bg-success' : 'text-bg-warning')"
+                      th:text="${c.situacao}"></span></td>
+            <td th:text="${c.dataPagamento != null} ? ${#temporals.format(c.dataPagamento, 'dd/MM/yyyy')} : '-'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="fw-semibold" data-testid="total-em-aberto">Total em aberto:
+        <span th:text="'R$ ' + ${#numbers.formatDecimal(resumo.totalEmAberto, 1, 'POINT', 2, 'COMMA')}"></span></p>
+    <p class="text-muted small mt-4">Dúvidas sobre valores ou horários? Fale com a clínica.</p>
+</div>
+</body>
+</html>

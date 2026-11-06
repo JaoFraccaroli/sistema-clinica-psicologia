@@ -50,6 +50,14 @@ class CobrancaServiceTest {
         assertThat(cobranca.getStatus()).isEqualTo(StatusCobranca.PENDENTE);
     }
 
+    @Test
+    void listaSoAsCobrancasDoPacientePedido() {
+        List<Cobranca> doPaciente = List.of(new Cobranca());
+        when(cobrancas.findByCodigoPacienteOrderByVencimentoAsc("PAC-1")).thenReturn(doPaciente);
+
+        assertThat(service.listarDoPaciente("PAC-1")).isSameAs(doPaciente);
+    }
+
     // Valores de fronteira do valor da cobrança: o limite é zero
     @ParameterizedTest(name = "valor {0} é recusado")
     @ValueSource(strings = { "0", "0.00", "-0.01", "-150.00" })

@@ -12,8 +12,16 @@ public class HomeController {
 
     @GetMapping("/")
     public String inicio(Authentication autenticacao) {
-        boolean ehPsicologa = autenticacao.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_PSICOLOGA"));
-        return ehPsicologa ? "redirect:/clinico/pacientes" : "redirect:/financeiro/cobrancas";
+        if (temPerfil(autenticacao, "ROLE_PSICOLOGA")) {
+            return "redirect:/clinico/pacientes";
+        }
+        if (temPerfil(autenticacao, "ROLE_PACIENTE")) {
+            return "redirect:/paciente";
+        }
+        return "redirect:/financeiro/cobrancas";
+    }
+
+    private static boolean temPerfil(Authentication autenticacao, String perfil) {
+        return autenticacao.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(perfil));
     }
 }

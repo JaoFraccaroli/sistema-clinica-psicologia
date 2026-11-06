@@ -29,6 +29,15 @@ public class PacienteService {
                 .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado: " + id));
     }
 
+    public Paciente buscarPorCodigo(String codigo) {
+        return pacientes.findByCodigo(codigo)
+                .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado: " + codigo));
+    }
+
+    public boolean existeCodigo(String codigo) {
+        return pacientes.findByCodigo(codigo).isPresent();
+    }
+
     @Transactional
     public Paciente cadastrar(Paciente paciente) {
         if (paciente.getCodigo() == null || paciente.getCodigo().isBlank()) {

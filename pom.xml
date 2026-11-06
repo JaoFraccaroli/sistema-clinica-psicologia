@@ -168,10 +168,19 @@
 						<param>com.jaofraccaroli.clinica.financeiro.CobrancaService</param>
 						<param>com.jaofraccaroli.clinica.financeiro.SituacaoCobranca</param>
 						<param>com.jaofraccaroli.clinica.financeiro.ExportadorCsvCobrancas</param>
+						<param>com.jaofraccaroli.clinica.clinico.PacienteService</param>
+						<param>com.jaofraccaroli.clinica.clinico.FaturamentoAdapter</param>
+						<param>com.jaofraccaroli.clinica.portal.GeradorDeSenha</param>
+						<param>com.jaofraccaroli.clinica.portal.AcessoPacienteService</param>
+						<param>com.jaofraccaroli.clinica.portal.AreaDoPacienteService</param>
+						<param>com.jaofraccaroli.clinica.seguranca.UsuariosDaClinica</param>
 					</targetClasses>
 					<targetTests>
 						<param>com.jaofraccaroli.clinica.comum.*Test</param>
 						<param>com.jaofraccaroli.clinica.financeiro.*Test</param>
+						<param>com.jaofraccaroli.clinica.clinico.*Test</param>
+						<param>com.jaofraccaroli.clinica.portal.*Test</param>
+						<param>com.jaofraccaroli.clinica.seguranca.*Test</param>
 						<param>com.jaofraccaroli.clinica.CobrancaServiceTest</param>
 					</targetTests>
 					<!-- getters e setters não têm regra para mutar -->

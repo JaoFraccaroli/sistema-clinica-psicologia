@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.jaofraccaroli.clinica.portal.AcessoPacienteService;
+
 import jakarta.validation.Valid;
 
 @Controller
@@ -21,9 +23,11 @@ import jakarta.validation.Valid;
 public class ClinicoController {
 
     private final PacienteService pacienteService;
+    private final AcessoPacienteService acessoPaciente;
 
-    public ClinicoController(PacienteService pacienteService) {
+    public ClinicoController(PacienteService pacienteService, AcessoPacienteService acessoPaciente) {
         this.pacienteService = pacienteService;
+        this.acessoPaciente = acessoPaciente;
     }
 
     @GetMapping
@@ -52,7 +56,9 @@ public class ClinicoController {
 
     @GetMapping("/{id}")
     public String prontuario(@PathVariable Long id, Model model) {
-        model.addAttribute("paciente", pacienteService.buscar(id));
+        Paciente paciente = pacienteService.buscar(id);
+        model.addAttribute("paciente", paciente);
+        model.addAttribute("temAcesso", acessoPaciente.temAcesso(paciente.getCodigo()));
         model.addAttribute("sessoes", pacienteService.sessoesDo(id));
         model.addAttribute("statusPossiveis", StatusSessao.values());
         return "clinico/prontuario";
@@ -66,6 +72,19 @@ public class ClinicoController {
                                   RedirectAttributes redirect) {
         pacienteService.registrarSessao(id, dataHora, status, anotacoes);
         redirect.addFlashAttribute("mensagem", "Sessão registrada");
+        return "redirect:/clinico/pacientes/" + id;
+    }
+
+    /**
+     * Gera a senha de acesso do paciente. Ela aparece uma única vez na tela,
+     * para a psicóloga entregar ao paciente; depois só existe o hash.
+     */
+    @PostMapping("/{id}/acesso")
+    public String gerarAcesso(@PathVariable Long id, RedirectAttributes redirect) {
+        Paciente paciente = pacienteService.buscar(id);
+        String senha = acessoPaciente.gerarNovaSenha(paciente.getCodigo());
+        redirect.addFlashAttribute("senhaGerada", senha);
+        redirect.addFlashAttribute("mensagem", "Acesso do paciente criado. Usuário: " + paciente.getCodigo());
         return "redirect:/clinico/pacientes/" + id;
     }
 }

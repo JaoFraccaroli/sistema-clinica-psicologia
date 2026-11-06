@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CobrancaRepository extends JpaRepository<Cobranca, Long> {
 
     List<Cobranca> findAllByOrderByVencimentoAsc();
+
+    List<Cobranca> findByCodigoPacienteOrderByVencimentoAsc(String codigoPaciente);
 }

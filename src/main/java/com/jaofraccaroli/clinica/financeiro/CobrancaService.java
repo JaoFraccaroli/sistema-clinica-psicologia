@@ -22,6 +22,11 @@ public class CobrancaService {
         return cobrancas.findAllByOrderByVencimentoAsc();
     }
 
+    /** Cobranças de um único paciente (usado na área do paciente). */
+    public List<Cobranca> listarDoPaciente(String codigoPaciente) {
+        return cobrancas.findByCodigoPacienteOrderByVencimentoAsc(codigoPaciente);
+    }
+
     public List<DadosFaturamento> pacientesParaCobranca() {
         return dadosFaturamento.listarTodos();
     }

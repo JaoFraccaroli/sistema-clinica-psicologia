@@ -1,15 +1,11 @@
 package com.jaofraccaroli.clinica.seguranca;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
@@ -18,6 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
  * PSICOLOGA: acessa a área clínica e só CONSULTA a área financeira (não cria nem altera cobranças).
  * FINANCEIRO: acessa somente a área financeira, com permissão para criar cobranças e registrar
  * pagamentos. Nunca vê dados clínicos.
+ * PACIENTE: entra com o código do paciente e vê somente as próprias sessões e cobranças.
  */
 @Configuration
 public class SegurancaConfig {
@@ -28,6 +25,7 @@ public class SegurancaConfig {
             .authorizeHttpRequests(acesso -> acesso
                 .requestMatchers("/login", "/error").permitAll()
                 .requestMatchers("/clinico/**").hasRole("PSICOLOGA")
+                .requestMatchers("/paciente/**", "/paciente").hasRole("PACIENTE")
                 // A psicóloga só pode ver a lista de cobranças e baixar a planilha
                 .requestMatchers(HttpMethod.GET, "/financeiro/cobrancas", "/financeiro/cobrancas/exportar")
                     .hasAnyRole("PSICOLOGA", "FINANCEIRO")
@@ -42,23 +40,9 @@ public class SegurancaConfig {
         return http.build();
     }
 
-    /**
-     * Usuários de demonstração. As senhas podem ser trocadas pelas variáveis
-     * de ambiente SENHA_PSICOLOGA e SENHA_FINANCEIRO.
-     */
+    /** Senhas guardadas como hash BCrypt ({bcrypt}...). */
     @Bean
-    public UserDetailsService usuarios(
-            @Value("${clinica.senha.psicologa}") String senhaPsicologa,
-            @Value("${clinica.senha.financeiro}") String senhaFinanceiro) {
-        PasswordEncoder codificador = PasswordEncoderFactories.createDelegatingPasswordEncoder();
-        return new InMemoryUserDetailsManager(
-                User.withUsername("psicologa")
-                        .password(codificador.encode(senhaPsicologa))
-                        .roles("PSICOLOGA")
-                        .build(),
-                User.withUsername("financeiro")
-                        .password(codificador.encode(senhaFinanceiro))
-                        .roles("FINANCEIRO")
-                        .build());
+    public PasswordEncoder codificadorDeSenha() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 }
