@@ -21,7 +21,7 @@ jobs:
 
       - name: Resumo de qualidade
         if: always()
-        run: python3 scripts/resumo_qualidade.py >> "$GITHUB_STEP_SUMMARY"
+        run: python3 scripts/resumo_qualidade.py | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Publicar relatórios
         if: always()

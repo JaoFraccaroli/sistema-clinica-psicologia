@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -130,5 +131,22 @@ class CobrancaServiceTest {
 
         assertThatThrownBy(() -> service.registrarPagamento(1L, LocalDate.now()))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    // Encontrados pelo PIT: estes métodos não tinham teste de unidade (mutantes "sem cobertura")
+    @Test
+    void listaAsCobrancasDoRepositorio() {
+        Cobranca cobranca = new Cobranca();
+        when(cobrancas.findAllByOrderByVencimentoAsc()).thenReturn(List.of(cobranca));
+
+        assertThat(service.listar()).containsExactly(cobranca);
+    }
+
+    @Test
+    void pacientesParaCobrancaVemDaAreaClinica() {
+        DadosFaturamento dados = new DadosFaturamento("PAC-1", "Maria", "529.982.247-25", new BigDecimal("150"));
+        when(dadosFaturamento.listarTodos()).thenReturn(List.of(dados));
+
+        assertThat(service.pacientesParaCobranca()).containsExactly(dados);
     }
 }
