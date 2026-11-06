@@ -7,7 +7,8 @@
     <div th:replace="~{fragmentos :: mensagens}"></div>
     <div class="d-flex justify-content-between align-items-center">
         <h1>Cobranças</h1>
-        <a th:href="@{/financeiro/cobrancas/nova}" class="btn btn-success">Nova cobrança</a>
+        <a th:if="${podeEditar}" th:href="@{/financeiro/cobrancas/nova}" class="btn btn-success">Nova cobrança</a>
+        <span th:unless="${podeEditar}" class="badge text-bg-secondary fs-6" data-testid="somente-leitura">Modo somente leitura</span>
     </div>
     <p class="text-muted">Os pacientes aparecem apenas pelo código. Dados clínicos não ficam disponíveis nesta área.</p>
     <table class="table table-striped mt-3">
@@ -23,7 +24,7 @@
             <td th:text="${#temporals.format(c.vencimento, 'dd/MM/yyyy')}"></td>
             <td th:text="${c.status}"></td>
             <td>
-                <form th:if="${c.status.name() == 'PENDENTE'}"
+                <form th:if="${podeEditar and c.status.name() == 'PENDENTE'}"
                       th:action="@{/financeiro/cobrancas/{id}/pagar(id=${c.id})}" method="post">
                     <button type="submit" class="btn btn-sm btn-outline-success">Registrar pagamento</button>
                 </form>
@@ -31,6 +32,7 @@
         </tr>
         </tbody>
     </table>
+    <a th:unless="${podeEditar}" th:href="@{/clinico/pacientes}">&larr; Voltar à área clínica</a>
 </div>
 </body>
 </html>

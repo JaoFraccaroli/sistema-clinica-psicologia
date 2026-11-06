@@ -10,11 +10,13 @@ Funcionalidade: Separação entre a área clínica e a financeira
     Então o acesso deve ser "<resultado>"
 
     Exemplos:
-      | perfil     | pagina                | resultado |
-      | psicologa  | /clinico/pacientes    | permitido |
-      | psicologa  | /financeiro/cobrancas | permitido |
-      | financeiro | /financeiro/cobrancas | permitido |
-      | financeiro | /clinico/pacientes    | negado    |
+      | perfil     | pagina                     | resultado |
+      | psicologa  | /clinico/pacientes         | permitido |
+      | psicologa  | /financeiro/cobrancas      | permitido |
+      | psicologa  | /financeiro/cobrancas/nova | negado    |
+      | financeiro | /financeiro/cobrancas      | permitido |
+      | financeiro | /financeiro/cobrancas/nova | permitido |
+      | financeiro | /clinico/pacientes         | negado    |
 
   Cenário: Visitante sem login é enviado para a tela de login
     Dado que não estou logado
@@ -28,3 +30,22 @@ Funcionalidade: Separação entre a área clínica e a financeira
     Quando eu acesso "/financeiro/cobrancas"
     Então a página deve mostrar o código do paciente
     E a página não deve conter "Relato sigiloso de teste"
+
+  Cenário: A psicóloga só consulta as cobranças
+    Dado que estou logado como "psicologa"
+    Quando eu acesso "/financeiro/cobrancas"
+    Então o acesso deve ser "permitido"
+    E a página deve conter "Modo somente leitura"
+    E a página não deve conter "Nova cobrança"
+
+  Esquema do Cenário: A psicóloga não consegue alterar o financeiro
+    Dado que existe um paciente com a anotação de sessão "Sessão de teste"
+    E existe uma cobrança para esse paciente
+    E que estou logado como "psicologa"
+    Quando eu tento <acao>
+    Então o acesso deve ser "negado"
+
+    Exemplos:
+      | acao                                 |
+      | criar uma cobrança para esse paciente |
+      | registrar o pagamento dessa cobrança  |

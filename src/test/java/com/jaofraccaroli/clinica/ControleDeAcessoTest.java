@@ -127,6 +127,65 @@ class ControleDeAcessoTest {
                 .andExpect(content().string(containsString("Informe o nome")));
     }
 
+    // ---------- Psicóloga: financeiro somente leitura ----------
+
+    @Test
+    void psicologaVeCobrancasEmModoSomenteLeitura() throws Exception {
+        mockMvc.perform(get("/financeiro/cobrancas").with(PSICOLOGA))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Modo somente leitura")))
+                .andExpect(content().string(not(containsString("Nova cobrança"))))
+                .andExpect(content().string(not(containsString("Registrar pagamento"))));
+    }
+
+    @Test
+    void psicologaNaoAbreFormularioDeNovaCobranca() throws Exception {
+        mockMvc.perform(get("/financeiro/cobrancas/nova").with(PSICOLOGA))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void psicologaNaoCriaCobrancaNemEnviandoOFormularioDireto() throws Exception {
+        Paciente paciente = novoPaciente("Paciente Cobrança Psicóloga");
+        mockMvc.perform(post("/financeiro/cobrancas").with(PSICOLOGA).with(csrf())
+                        .param("codigoPaciente", paciente.getCodigo())
+                        .param("valor", "150.00")
+                        .param("vencimento", "2026-12-01"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void psicologaNaoRegistraPagamento() throws Exception {
+        Paciente paciente = novoPaciente("Paciente Pagamento Psicóloga");
+        Long id = cobrancaService.criar(paciente.getCodigo(), new BigDecimal("150.00"), LocalDate.now()).getId();
+        mockMvc.perform(post("/financeiro/cobrancas/" + id + "/pagar").with(PSICOLOGA).with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void financeiroVeBotoesECriaCobranca() throws Exception {
+        mockMvc.perform(get("/financeiro/cobrancas").with(FINANCEIRO))
+                .andExpect(content().string(containsString("Nova cobrança")))
+                .andExpect(content().string(not(containsString("Modo somente leitura"))));
+
+        Paciente paciente = novoPaciente("Paciente Cobrança Financeiro");
+        mockMvc.perform(post("/financeiro/cobrancas").with(FINANCEIRO).with(csrf())
+                        .param("codigoPaciente", paciente.getCodigo())
+                        .param("valor", "150.00")
+                        .param("vencimento", "2026-12-01"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/financeiro/cobrancas"));
+    }
+
+    @Test
+    void financeiroRegistraPagamento() throws Exception {
+        Paciente paciente = novoPaciente("Paciente Pagamento Financeiro");
+        Long id = cobrancaService.criar(paciente.getCodigo(), new BigDecimal("150.00"), LocalDate.now()).getId();
+        mockMvc.perform(post("/financeiro/cobrancas/" + id + "/pagar").with(FINANCEIRO).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/financeiro/cobrancas"));
+    }
+
     // ---------- Login e logout ----------
 
     @Test

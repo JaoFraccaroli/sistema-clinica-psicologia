@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,8 +25,11 @@ public class FinanceiroController {
     }
 
     @GetMapping
-    public String listar(Model model) {
+    public String listar(Model model, Authentication autenticacao) {
+        boolean podeEditar = autenticacao.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_FINANCEIRO"));
         model.addAttribute("cobrancas", cobrancaService.listar());
+        model.addAttribute("podeEditar", podeEditar);
         return "financeiro/cobrancas";
     }
 

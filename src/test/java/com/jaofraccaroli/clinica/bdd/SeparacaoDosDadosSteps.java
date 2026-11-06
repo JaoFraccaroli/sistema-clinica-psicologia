@@ -2,8 +2,10 @@ package com.jaofraccaroli.clinica.bdd;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,6 +23,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import com.jaofraccaroli.clinica.clinico.Paciente;
 import com.jaofraccaroli.clinica.clinico.PacienteService;
 import com.jaofraccaroli.clinica.clinico.StatusSessao;
+import com.jaofraccaroli.clinica.financeiro.Cobranca;
 import com.jaofraccaroli.clinica.financeiro.CobrancaService;
 
 import io.cucumber.java.en.Given;
@@ -45,6 +48,7 @@ public class SeparacaoDosDadosSteps {
     private RequestPostProcessor usuario;
     private ResultActions resultado;
     private Paciente paciente;
+    private Cobranca cobranca;
 
     @Given("que estou logado como {string}")
     public void queEstouLogadoComo(String perfil) {
@@ -68,7 +72,7 @@ public class SeparacaoDosDadosSteps {
 
     @Given("existe uma cobrança para esse paciente")
     public void existeUmaCobrancaParaEssePaciente() {
-        cobrancaService.criar(paciente.getCodigo(), new BigDecimal("150.00"), LocalDate.now().plusDays(5));
+        cobranca = cobrancaService.criar(paciente.getCodigo(), new BigDecimal("150.00"), LocalDate.now().plusDays(5));
     }
 
     @When("eu acesso {string}")
@@ -105,5 +109,24 @@ public class SeparacaoDosDadosSteps {
     @Then("a página não deve conter {string}")
     public void aPaginaNaoDeveConter(String texto) throws Exception {
         resultado.andExpect(content().string(not(containsString(texto))));
+    }
+
+    @When("eu tento criar uma cobrança para esse paciente")
+    public void euTentoCriarUmaCobranca() throws Exception {
+        resultado = mockMvc.perform(post("/financeiro/cobrancas").with(usuario).with(csrf())
+                .param("codigoPaciente", paciente.getCodigo())
+                .param("valor", "150.00")
+                .param("vencimento", LocalDate.now().plusDays(5).toString()));
+    }
+
+    @When("eu tento registrar o pagamento dessa cobrança")
+    public void euTentoRegistrarOPagamento() throws Exception {
+        resultado = mockMvc.perform(post("/financeiro/cobrancas/" + cobranca.getId() + "/pagar")
+                .with(usuario).with(csrf()));
+    }
+
+    @Then("a página deve conter {string}")
+    public void aPaginaDeveConter(String texto) throws Exception {
+        resultado.andExpect(content().string(containsString(texto)));
     }
 }
