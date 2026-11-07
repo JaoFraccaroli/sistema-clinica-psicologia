@@ -49,7 +49,7 @@ status_de() {       # cookies, caminho
 
 contar_pacientes() {
   if [[ "$MODO" == "kubernetes" ]]; then
-    kubectl -n clinica exec clinica-banco-0 -- mysql -u"$DB_USER" -p"$DB_PASSWORD" clinica -N -s \
+    kubectl -n clinica exec clinica-banco-0 -- mysql -h 127.0.0.1 -u"$DB_USER" -p"$DB_PASSWORD" clinica -N -s \
       -e "SELECT COUNT(*) FROM clinico_paciente" 2>>/tmp/erros_mysql.txt | tr -d '[:space:]'
     return
   fi
