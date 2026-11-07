@@ -1,0 +1,63 @@
+# MySQL como StatefulSet: o Kubernetes dá a ele um disco próprio (PersistentVolumeClaim)
+# que continua existindo mesmo se o pod for apagado e recriado.
+apiVersion: v1
+kind: Service
+metadata:
+  name: clinica-banco
+spec:
+  clusterIP: None          # "headless": a aplicação acha o banco pelo nome clinica-banco
+  selector:
+    app: clinica-banco
+  ports:
+    - port: 3306
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: clinica-banco
+spec:
+  serviceName: clinica-banco
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clinica-banco
+  template:
+    metadata:
+      labels:
+        app: clinica-banco
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          env:
+            - name: MYSQL_DATABASE
+              value: clinica
+            - name: MYSQL_USER
+              valueFrom: { secretKeyRef: { name: clinica-segredos, key: DB_USER } }
+            - name: MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: clinica-segredos, key: DB_PASSWORD } }
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: clinica-segredos, key: DB_ROOT_PASSWORD } }
+          ports:
+            - containerPort: 3306
+          readinessProbe:
+            # Pela rede (127.0.0.1): só fica "pronto" quando o MySQL terminou de iniciar
+            exec:
+              command: ["sh", "-c", "mysql -h 127.0.0.1 -u\"$MYSQL_USER\" -p\"$MYSQL_PASSWORD\" -e 'SELECT 1' \"$MYSQL_DATABASE\""]
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
+          resources:
+            requests: { cpu: 100m, memory: 384Mi }
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

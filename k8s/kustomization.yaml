@@ -1,0 +1,10 @@
+# Clínica no Kubernetes: aplica tudo de uma vez com
+#   kubectl apply -k k8s
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: clinica
+resources:
+  - namespace.yaml
+  - segredo-demo.yaml
+  - banco.yaml
+  - aplicacao.yaml

@@ -1,0 +1,15 @@
+# Senhas SÓ PARA DEMONSTRAÇÃO (as mesmas do docker-compose.yml).
+# Num cluster de verdade, crie o Secret pelo terminal e não guarde senhas no Git:
+#   kubectl -n clinica create secret generic clinica-segredos --from-literal=DB_PASSWORD=... (etc.)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: clinica-segredos
+type: Opaque
+stringData:
+  DB_USER: clinica
+  DB_PASSWORD: clinica-senha-demo
+  DB_ROOT_PASSWORD: root-senha-demo
+  SENHA_PSICOLOGA: psicologa123
+  SENHA_FINANCEIRO: financeiro123
+  SENHA_PACIENTE_EXEMPLO: paciente123

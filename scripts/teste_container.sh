@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Testes de fumaça da clínica rodando no Docker Compose (aplicação + MySQL).
+# Testes de fumaça da clínica rodando em container (aplicação + MySQL).
 # Usa só curl, como um usuário de verdade usaria pelo navegador.
+#
+#   bash scripts/teste_container.sh                      (Docker Compose, porta 8080)
+#   MODO=kubernetes bash scripts/teste_container.sh      (cluster kind, porta 8081)
 set -euo pipefail
 
-BASE="${BASE:-http://localhost:8080}"
+MODO="${MODO:-compose}"
+if [[ "$MODO" == "kubernetes" ]]; then
+  BASE="${BASE:-http://localhost:8081}"
+else
+  BASE="${BASE:-http://localhost:8080}"
+fi
 DB_USER="${DB_USER:-clinica}"
 DB_PASSWORD="${DB_PASSWORD:-clinica-senha-demo}"
 FALHAS=0
@@ -40,6 +48,11 @@ status_de() {       # cookies, caminho
 }
 
 contar_pacientes() {
+  if [[ "$MODO" == "kubernetes" ]]; then
+    kubectl -n clinica exec clinica-banco-0 -- mysql -u"$DB_USER" -p"$DB_PASSWORD" clinica -N -s \
+      -e "SELECT COUNT(*) FROM clinico_paciente" 2>/dev/null | tr -d '[:space:]'
+    return
+  fi
   docker compose exec -T banco mysql -u"$DB_USER" -p"$DB_PASSWORD" clinica -N -s \
     -e "SELECT COUNT(*) FROM clinico_paciente" 2>/dev/null | tr -d '[:space:]'
 }
@@ -71,8 +84,29 @@ echo "== Primeira execução"
 verificar_tudo
 [[ "$(contar_pacientes)" == "2" ]] && ok "Dados gravados no MySQL (2 pacientes fictícios)" || falha "MySQL não tem os 2 pacientes"
 
-echo "== Reiniciando a aplicação (os dados precisam continuar no MySQL)"
-docker compose restart app >/dev/null
+if [[ "$MODO" == "kubernetes" ]]; then
+  echo "== Apagando o pod da aplicação E o do banco (o Kubernetes tem que recriar sozinho, sem perder dados)"
+  pod_antigo=$(kubectl -n clinica get pods -l app=clinica-app -o jsonpath='{.items[0].metadata.name}')
+  kubectl -n clinica delete pod "$pod_antigo" clinica-banco-0 --wait=false >/dev/null
+  pod_novo=""
+  for _ in $(seq 1 100); do
+    pod_novo=$(kubectl -n clinica get pods -l app=clinica-app \
+      -o jsonpath='{range .items[?(@.status.containerStatuses[0].ready==true)]}{.metadata.name}{"\n"}{end}' | grep -v "^$pod_antigo$" | head -1 || true)
+    [[ -n "$pod_novo" ]] && break
+    sleep 3
+  done
+  [[ -n "$pod_novo" ]] && ok "Kubernetes recriou o pod da aplicação sozinho ($pod_antigo → $pod_novo)" \
+    || falha "Pod da aplicação não voltou"
+  banco_ok=false
+  for _ in $(seq 1 30); do   # o pod pode estar sendo recriado (ainda "não existe") por alguns segundos
+    if kubectl -n clinica wait --for=condition=Ready pod/clinica-banco-0 --timeout=20s >/dev/null 2>&1; then banco_ok=true; break; fi
+    sleep 3
+  done
+  $banco_ok && ok "Kubernetes recriou o pod do banco com o mesmo disco" || falha "Pod do banco não voltou"
+else
+  echo "== Reiniciando a aplicação (os dados precisam continuar no MySQL)"
+  docker compose restart app >/dev/null
+fi
 sleep 5
 esperar_aplicacao
 verificar_tudo

@@ -23,6 +23,39 @@ jobs:
         if: always()
         run: docker compose down -v
 
+  kubernetes:
+    name: Kubernetes (cluster kind + MySQL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Criar cluster Kubernetes local (kind)
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: clinica
+          config: k8s/kind-config.yaml
+
+      - name: Construir a imagem e carregar no cluster
+        run: |
+          docker build -t clinica:local .
+          kind load docker-image clinica:local --name clinica
+
+      - name: Aplicar os manifestos
+        run: |
+          kubectl apply -k k8s
+          kubectl -n clinica rollout status statefulset/clinica-banco --timeout=300s
+          kubectl -n clinica rollout status deployment/clinica-app --timeout=400s
+
+      - name: Testes de fumaça no Kubernetes
+        run: MODO=kubernetes bash scripts/teste_container.sh | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Diagnóstico (se algo falhar)
+        if: failure()
+        run: |
+          kubectl -n clinica get all,pvc -o wide
+          kubectl -n clinica describe pods | tail -120
+          kubectl -n clinica logs deployment/clinica-app --all-containers --tail=200 || true
+
   qualidade:
     runs-on: ubuntu-latest
     steps:

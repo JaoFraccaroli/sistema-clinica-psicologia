@@ -99,6 +99,31 @@ docker compose down -v        # para e apaga os dados
 - As senhas padrão são só para demonstração. Para trocar, copie [`.env.exemplo`](.env.exemplo) para `.env`; o `.env` não vai para o GitHub.
 - A cada push, o GitHub Actions sobe o Compose e roda [`scripts/teste_container.sh`](scripts/teste_container.sh): login de cada perfil, permissões (o financeiro recebe 403 na área clínica), senha errada, dados gravados no MySQL e **dados mantidos depois de reiniciar a aplicação**.
 
+## Rodar no Kubernetes (cluster local com kind)
+
+O [kind](https://kind.sigs.k8s.io/) cria um cluster Kubernetes **dentro do Docker**, de graça e sem conta em nuvem. No Windows, com o Docker Desktop aberto, instale o kind uma vez pelo PowerShell (`winget install Kubernetes.kind`); o `kubectl` já vem com o Docker Desktop.
+
+```bash
+kind create cluster --name clinica --config k8s/kind-config.yaml   # cria o cluster (1 vez)
+docker build -t clinica:local .                                     # constrói a imagem
+kind load docker-image clinica:local --name clinica                 # entrega a imagem ao cluster
+kubectl apply -k k8s                                                # sobe MySQL + aplicação
+kubectl -n clinica get pods -w                                      # acompanha até ficar Running (Ctrl+C para sair)
+```
+
+Abra **http://localhost:8081** (a 8080 fica livre para o Docker Compose). Para apagar tudo: `kind delete cluster --name clinica`.
+
+O que tem em [`k8s/`](k8s):
+
+| Arquivo | O que faz |
+|---|---|
+| `banco.yaml` | MySQL como **StatefulSet**, com disco próprio (PersistentVolumeClaim) que sobrevive se o pod for apagado |
+| `aplicacao.yaml` | **Deployment** da aplicação, com *initContainer* que espera o banco, *probes* de inicialização/prontidão/vida, limites de memória e execução sem root; **Service** NodePort |
+| `segredo-demo.yaml` | **Secret** com as senhas de demonstração (num cluster real, crie pelo terminal e não guarde no Git) |
+| `kind-config.yaml` | Cluster de 1 nó, repassando a porta 30080 do nó para `localhost:8081` |
+
+A cada push, o GitHub Actions cria um cluster kind, aplica os manifestos e roda `MODO=kubernetes bash scripts/teste_container.sh`: os mesmos testes do Compose e, além deles, **apaga os pods da aplicação e do banco** e confere que o Kubernetes os recria sozinho, sem perder nem duplicar dados.
+
 ## Como rodar sem Docker
 
 É preciso ter o **Java 17 ou mais novo**.

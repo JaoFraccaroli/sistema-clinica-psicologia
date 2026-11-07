@@ -1,0 +1,5 @@
+# Um "espaço" só da clínica dentro do cluster: fica separado de outras aplicações
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: clinica

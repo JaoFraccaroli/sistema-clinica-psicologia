@@ -1,0 +1,9 @@
+# Cluster local de 1 nó com o kind (Kubernetes dentro do Docker):
+#   kind create cluster --name clinica --config k8s/kind-config.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # nodePort do Service clinica-app
+        hostPort: 8081         # http://localhost:8081 (8080 fica livre para o docker compose)
