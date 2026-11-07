@@ -8,3 +8,6 @@ target/
 
 # Banco local com os dados da aplicação (nunca vai para o GitHub)
 /dados/
+
+# Senhas locais do Docker Compose
+.env

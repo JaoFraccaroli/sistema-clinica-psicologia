@@ -1,0 +1,47 @@
+# Sobe a clínica completa: aplicação + banco MySQL.
+#
+#   docker compose up --build      (abre em http://localhost:8080)
+#   docker compose down            (para; os dados continuam no volume)
+#   docker compose down -v         (para e APAGA os dados)
+#
+# As senhas abaixo são só para demonstração. Para trocar, crie um arquivo
+# .env (veja .env.exemplo) — ele não vai para o GitHub.
+
+services:
+  banco:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: clinica
+      MYSQL_USER: ${DB_USER:-clinica}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-clinica-senha-demo}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root-senha-demo}
+    volumes:
+      - dados-mysql:/var/lib/mysql
+    healthcheck:
+      # Pela rede (127.0.0.1): só responde quando o MySQL terminou de iniciar
+      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD -e 'SELECT 1' $$MYSQL_DATABASE"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  app:
+    build: .
+    depends_on:
+      banco:
+        condition: service_healthy
+    restart: on-failure
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql
+      DB_URL: jdbc:mysql://banco:3306/clinica
+      DB_USER: ${DB_USER:-clinica}
+      DB_PASSWORD: ${DB_PASSWORD:-clinica-senha-demo}
+      SENHA_PSICOLOGA: ${SENHA_PSICOLOGA:-psicologa123}
+      SENHA_FINANCEIRO: ${SENHA_FINANCEIRO:-financeiro123}
+      SENHA_PACIENTE_EXEMPLO: ${SENHA_PACIENTE_EXEMPLO:-paciente123}
+      # Cria os pacientes fictícios na primeira vez (só se o banco estiver vazio)
+      SPRING_APPLICATION_JSON: '{"clinica":{"dados-exemplo":true}}'
+    ports:
+      - "8080:8080"
+
+volumes:
+  dados-mysql:
