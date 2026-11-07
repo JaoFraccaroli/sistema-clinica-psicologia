@@ -130,6 +130,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: docker/setup-buildx-action@v3
+
       - name: Construir e publicar (latest + commit)
         uses: docker/build-push-action@v6
         with:
@@ -148,13 +150,14 @@ jobs:
       - name: Varredura de vulnerabilidades (Trivy)
         run: |
           set -o pipefail
+          docker pull -q ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
           {
             echo "## Varredura de segurança da imagem (Trivy)"
             echo
             echo "Vulnerabilidades conhecidas de severidade ALTA e CRÍTICA (só relatório; não bloqueia):"
             echo
             echo '```'
-            docker run --rm aquasec/trivy:0.58.1 image --quiet --severity HIGH,CRITICAL \
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 image --quiet --severity HIGH,CRITICAL \
               --ignore-unfixed --format table \
               ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
             echo '```'
