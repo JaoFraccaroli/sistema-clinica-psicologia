@@ -82,9 +82,24 @@ No GitHub, abra a aba **Actions**, entre na execução mais recente e baixe o ar
 
 ## Tecnologias
 
-Java 17, Spring Boot 3 (Web, Data JPA, Security, Validation), Thymeleaf, Bootstrap 5, H2/MySQL, JUnit 5, Mockito, Cucumber, JaCoCo e PIT.
+Java 17, Spring Boot 3 (Web, Data JPA, Security, Validation), Thymeleaf, Bootstrap 5, H2/MySQL, JUnit 5, Mockito, Cucumber, JaCoCo, PIT, Docker e Docker Compose.
 
-## Como rodar
+## Rodar com Docker (aplicação + MySQL)
+
+Com o **Docker** instalado (no Windows, pelo Docker Desktop ou pelo WSL2), não é preciso ter Java nem Maven:
+
+```bash
+docker compose up --build     # sobe a aplicação + MySQL em http://localhost:8080
+docker compose down           # para (os dados continuam no volume do MySQL)
+docker compose down -v        # para e apaga os dados
+```
+
+- O [`Dockerfile`](Dockerfile) compila em duas etapas: o Maven roda **dentro** do container e a imagem final tem só o Java e o `.jar`. A aplicação roda com um **usuário sem privilégios**, não como root.
+- O [`docker-compose.yml`](docker-compose.yml) sobe o **MySQL 8.4** com verificação de saúde. A aplicação só inicia quando o banco está pronto.
+- As senhas padrão são só para demonstração. Para trocar, copie [`.env.exemplo`](.env.exemplo) para `.env`; o `.env` não vai para o GitHub.
+- A cada push, o GitHub Actions sobe o Compose e roda [`scripts/teste_container.sh`](scripts/teste_container.sh): login de cada perfil, permissões (o financeiro recebe 403 na área clínica), senha errada, dados gravados no MySQL e **dados mantidos depois de reiniciar a aplicação**.
+
+## Como rodar sem Docker
 
 É preciso ter o **Java 17 ou mais novo**.
 
