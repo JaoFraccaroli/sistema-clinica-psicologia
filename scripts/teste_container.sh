@@ -50,7 +50,7 @@ status_de() {       # cookies, caminho
 contar_pacientes() {
   if [[ "$MODO" == "kubernetes" ]]; then
     kubectl -n clinica exec clinica-banco-0 -- mysql -u"$DB_USER" -p"$DB_PASSWORD" clinica -N -s \
-      -e "SELECT COUNT(*) FROM clinico_paciente" 2>/dev/null | tr -d '[:space:]'
+      -e "SELECT COUNT(*) FROM clinico_paciente" 2>>/tmp/erros_mysql.txt | tr -d '[:space:]'
     return
   fi
   docker compose exec -T banco mysql -u"$DB_USER" -p"$DB_PASSWORD" clinica -N -s \
@@ -111,6 +111,10 @@ sleep 5
 esperar_aplicacao
 verificar_tudo
 [[ "$(contar_pacientes)" == "2" ]] && ok "Depois de reiniciar: mesmos 2 pacientes, sem duplicar" || falha "Pacientes sumiram ou duplicaram"
+
+if [[ $FALHAS -ne 0 && -s /tmp/erros_mysql.txt ]]; then
+  echo "Erros do MySQL:"; grep -v "Using a password" /tmp/erros_mysql.txt | sort -u | head -5
+fi
 
 echo
 if [[ $FALHAS -eq 0 ]]; then echo "Tudo certo no container."; else echo "$FALHAS verificação(ões) falharam."; exit 1; fi

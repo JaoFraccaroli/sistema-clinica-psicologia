@@ -13,7 +13,7 @@ jobs:
         run: docker compose up -d --build
 
       - name: Testes de fumaça no container
-        run: bash scripts/teste_container.sh | tee -a "$GITHUB_STEP_SUMMARY"
+        run: set -o pipefail; bash scripts/teste_container.sh | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Logs (se algo falhar)
         if: failure()
@@ -47,7 +47,7 @@ jobs:
           kubectl -n clinica rollout status deployment/clinica-app --timeout=400s
 
       - name: Testes de fumaça no Kubernetes
-        run: MODO=kubernetes bash scripts/teste_container.sh | tee -a "$GITHUB_STEP_SUMMARY"
+        run: set -o pipefail; MODO=kubernetes bash scripts/teste_container.sh | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Diagnóstico (se algo falhar)
         if: failure()
