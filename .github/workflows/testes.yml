@@ -104,3 +104,89 @@ jobs:
           cache: maven
       - name: Testes (JUnit + Cucumber)
         run: mvn -B verify
+
+  # Só publica se TODOS os testes passaram e o push foi na main
+  publicar-imagem:
+    name: Publicar imagem (ghcr.io) + varredura de segurança
+    needs: [qualidade, java-mais-novo, container, kubernetes]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Etiqueta curta do commit
+        id: tag
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Entrar no GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir e publicar (latest + commit)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/jaofraccaroli/sistema-clinica-psicologia:latest
+            ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=Sistema de clínica de psicologia (Spring Boot) - dados fictícios
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Varredura de vulnerabilidades (Trivy)
+        run: |
+          set -o pipefail
+          {
+            echo "## Varredura de segurança da imagem (Trivy)"
+            echo
+            echo "Vulnerabilidades conhecidas de severidade ALTA e CRÍTICA (só relatório; não bloqueia):"
+            echo
+            echo '```'
+            docker run --rm aquasec/trivy:0.58.1 image --quiet --severity HIGH,CRITICAL \
+              --ignore-unfixed --format table \
+              ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # Confere que a imagem PUBLICADA funciona: baixa do ghcr.io e roda os testes de fumaça
+  testar-imagem-publicada:
+    name: Testar a imagem publicada
+    needs: publicar-imagem
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Baixar a imagem do commit e subir com MySQL
+        env:
+          COMPOSE_FILE: docker-compose.ghcr.yml
+          TAG: ${{ needs.publicar-imagem.outputs.tag }}
+        run: docker compose up -d
+      - name: Testes de fumaça
+        env:
+          COMPOSE_FILE: docker-compose.ghcr.yml
+          TAG: ${{ needs.publicar-imagem.outputs.tag }}
+        run: set -o pipefail; bash scripts/teste_container.sh | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Derrubar
+        if: always()
+        env:
+          COMPOSE_FILE: docker-compose.ghcr.yml
+        run: docker compose down -v

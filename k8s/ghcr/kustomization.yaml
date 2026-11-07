@@ -1,0 +1,19 @@
+# Mesma clínica do k8s/, mas usando a imagem publicada no GitHub Container Registry
+# (não precisa de docker build nem kind load):
+#   kubectl apply -k k8s/ghcr
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ..
+images:
+  - name: clinica:local
+    newName: ghcr.io/jaofraccaroli/sistema-clinica-psicologia
+    newTag: latest
+patches:
+  - target:
+      kind: Deployment
+      name: clinica-app
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always

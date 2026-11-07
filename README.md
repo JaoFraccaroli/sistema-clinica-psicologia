@@ -124,6 +124,23 @@ O que tem em [`k8s/`](k8s):
 
 A cada push, o GitHub Actions cria um cluster kind, aplica os manifestos e roda `MODO=kubernetes bash scripts/teste_container.sh`: os mesmos testes do Compose e, além deles, **apaga os pods da aplicação e do banco** e confere que o Kubernetes os recria sozinho, sem perder nem duplicar dados.
 
+## Imagem pronta no GitHub Container Registry
+
+[![Imagem no ghcr.io](https://img.shields.io/badge/imagem-ghcr.io%2Fjaofraccaroli%2Fsistema--clinica--psicologia-2496ED?logo=docker&logoColor=white)](https://github.com/JaoFraccaroli/sistema-clinica-psicologia/pkgs/container/sistema-clinica-psicologia)
+
+A cada push na `main`, **depois que todos os testes passam** (Java 17/21/25, Compose e Kubernetes), o GitHub Actions:
+
+1. publica a imagem em `ghcr.io/jaofraccaroli/sistema-clinica-psicologia` com duas etiquetas: `latest` e o código curto do commit (para voltar a uma versão antiga);
+2. faz uma **varredura de vulnerabilidades** com o [Trivy](https://trivy.dev/) e mostra o relatório no resumo da execução;
+3. **baixa a imagem publicada** e roda de novo os testes de fumaça, para garantir que o que foi publicado funciona.
+
+Para usar sem compilar nada:
+
+```bash
+docker compose -f docker-compose.ghcr.yml up          # aplicação + MySQL em http://localhost:8080
+kubectl apply -k k8s/ghcr                             # no cluster kind, sem docker build/kind load
+```
+
 ## Como rodar sem Docker
 
 É preciso ter o **Java 17 ou mais novo**.
