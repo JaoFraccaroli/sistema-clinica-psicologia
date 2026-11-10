@@ -167,9 +167,9 @@ jobs:
 
   # Só publica se TODOS os testes passaram e o push foi na main
   publicar-imagem:
-    name: Publicar imagem (ghcr.io) + varredura de segurança
+    name: Imagem + varredura de segurança (publica só na main)
     needs: [qualidade, java-mais-novo, container, kubernetes, api-e-carga]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Constrói e varre em todo push; só PUBLICA quando é push na main
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -184,6 +184,7 @@ jobs:
         run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Entrar no GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -192,11 +193,11 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - name: Construir e publicar (latest + commit)
+      - name: Construir a imagem (ainda sem publicar)
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          load: true
           tags: |
             ghcr.io/jaofraccaroli/sistema-clinica-psicologia:latest
             ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
@@ -207,26 +208,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Varredura de vulnerabilidades (Trivy)
+      - name: Varredura de vulnerabilidades (Trivy) - relatório
         run: |
           set -o pipefail
-          docker pull -q ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
           {
             echo "## Varredura de segurança da imagem (Trivy)"
             echo
-            echo "Vulnerabilidades conhecidas de severidade ALTA e CRÍTICA (só relatório; não bloqueia):"
+            echo "Vulnerabilidades ALTAS e CRÍTICAS que já têm correção:"
             echo
             echo '```'
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 image --quiet --severity HIGH,CRITICAL \
-              --ignore-unfixed --format table \
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 image --quiet \
+              --severity HIGH,CRITICAL --ignore-unfixed --format table \
               ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Portão de qualidade: com vulnerabilidade CRÍTICA que já tem correção, a imagem NÃO é publicada
+      - name: Bloquear se houver vulnerabilidade crítica corrigível
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 image --quiet \
+            --severity CRITICAL --ignore-unfixed --exit-code 1 --format table \
+            ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
+          echo "✅ Nenhuma vulnerabilidade crítica corrigível: imagem liberada para publicação." | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar (latest + commit)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ghcr.io/jaofraccaroli/sistema-clinica-psicologia:${{ steps.tag.outputs.tag }}
+          docker push ghcr.io/jaofraccaroli/sistema-clinica-psicologia:latest
 
   # Confere que a imagem PUBLICADA funciona: baixa do ghcr.io e roda os testes de fumaça
   testar-imagem-publicada:
     name: Testar a imagem publicada
     needs: publicar-imagem
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
