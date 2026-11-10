@@ -141,6 +141,35 @@ docker compose -f docker-compose.ghcr.yml up          # aplicação + MySQL em h
 kubectl apply -k k8s/ghcr                             # no cluster kind, sem docker build/kind load
 ```
 
+## Testes de API (Postman) e de carga (K6)
+
+**Postman / Newman** ([`postman/clinica.postman_collection.json`](postman/clinica.postman_collection.json)): **38 requisições e 98 verificações**, em 4 pastas.
+
+| Pasta | O que verifica |
+|---|---|
+| 1. Segurança sem login | Páginas protegidas redirecionam para o login. Cabeçalhos de segurança (`nosniff`, `X-Frame-Options: DENY`, `no-store`). Login sem token CSRF é recusado (403). Senha errada e usuário inexistente também são recusados. |
+| 2. Psicóloga | Vê pacientes e cobranças, mas **não** cria cobranças nem acessa a área do paciente. Depois do logout, perde o acesso. |
+| 3. Financeiro | O CSV exportado tem BOM UTF-8, 7 colunas separadas por `;`, a linha da cobrança fictícia e nenhuma célula iniciada por `= + - @` (injeção de fórmula). Vem como anexo `.csv`. O financeiro **não** vê a área clínica. |
+| 4. Paciente | Entra com o código em minúsculas e vê só os próprios dados, sem os de outro paciente. Recebe 403 nas áreas clínica e financeira. Paciente sem acesso liberado não entra. |
+
+Para abrir no **Postman**: *Import* → selecione o arquivo da coleção → *Run collection*, com a aplicação rodando em `http://localhost:8080`. Pelo terminal: `npx newman run postman/clinica.postman_collection.json`.
+
+**K6** ([`k6/carga.js`](k6/carga.js)): simula **até 18 usuários ao mesmo tempo**, sendo psicólogas, financeiro e pacientes. Cada um entra no sistema (com CSRF), navega e sai, por 70 segundos. O teste só passa se cumprir todos os critérios:
+
+| Critério | Limite |
+|---|---|
+| Requisições com erro | menos de 1% |
+| Páginas: 95% respondem em | menos de 800 ms |
+| Login (BCrypt): 95% respondem em | menos de 2 s |
+| Verificações corretas | mais de 99% |
+
+```bash
+k6 run k6/carga.js                                  # aplicação em http://localhost:8080
+docker run --rm -i --network host grafana/k6 run - < k6/carga.js   # sem instalar o k6 (Linux)
+```
+
+A cada push, o GitHub Actions sobe a aplicação com MySQL e roda os dois. Os resultados aparecem no resumo da execução. O relatório HTML do Postman e o JSON do K6 ficam nos artefatos.
+
 ## Como rodar sem Docker
 
 É preciso ter o **Java 17 ou mais novo**.
