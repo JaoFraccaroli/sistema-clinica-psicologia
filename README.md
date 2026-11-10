@@ -82,7 +82,7 @@ No GitHub, abra a aba **Actions**, entre na execução mais recente e baixe o ar
 
 ## Tecnologias
 
-Java 17, Spring Boot 3 (Web, Data JPA, Security, Validation), Thymeleaf, Bootstrap 5, H2/MySQL, JUnit 5, Mockito, Cucumber, JaCoCo, PIT, Docker e Docker Compose.
+Java 17, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation), Thymeleaf, Bootstrap 5, H2/MySQL, JUnit, Mockito, Cucumber, JaCoCo, PIT, Postman/Newman, K6, Docker, Docker Compose, Kubernetes (kind) e Trivy.
 
 ## Rodar com Docker (aplicação + MySQL)
 
@@ -131,8 +131,9 @@ A cada push, o GitHub Actions cria um cluster kind, aplica os manifestos e roda 
 A cada push na `main`, **depois que todos os testes passam** (Java 17/21/25, Compose e Kubernetes), o GitHub Actions:
 
 1. publica a imagem em `ghcr.io/jaofraccaroli/sistema-clinica-psicologia` com duas etiquetas: `latest` e o código curto do commit (para voltar a uma versão antiga);
-2. faz uma **varredura de vulnerabilidades** com o [Trivy](https://trivy.dev/) e mostra o relatório no resumo da execução;
-3. **baixa a imagem publicada** e roda de novo os testes de fumaça, para garantir que o que foi publicado funciona.
+2. faz uma **varredura de vulnerabilidades** com o [Trivy](https://trivy.dev/) **antes** de publicar e mostra o relatório no resumo da execução;
+3. **bloqueia a publicação** se houver vulnerabilidade **crítica** que já tenha correção (portão de qualidade);
+4. **baixa a imagem publicada** e roda de novo os testes de fumaça, para garantir que o que foi publicado funciona.
 
 Para usar sem compilar nada:
 
