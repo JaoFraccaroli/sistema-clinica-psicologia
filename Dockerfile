@@ -12,6 +12,8 @@ RUN mvn -B -q package -DskipTests
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
+# Aplica as correções de segurança do sistema que saíram depois da imagem base
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
 # Não roda como root: se alguém invadir a aplicação, não ganha o container inteiro
 RUN useradd --system --uid 1001 clinica && mkdir -p /app/dados && chown clinica /app/dados
 COPY --from=compilacao /app/target/*.jar app.jar
