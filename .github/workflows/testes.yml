@@ -56,6 +56,66 @@ jobs:
           kubectl -n clinica describe pods | tail -120
           kubectl -n clinica logs deployment/clinica-app --all-containers --tail=200 || true
 
+  api-e-carga:
+    name: API (Postman/Newman) + carga (K6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Subir aplicação + MySQL
+        run: |
+          docker compose up -d --build
+          for i in $(seq 1 100); do curl -fsS http://localhost:8080/login >/dev/null 2>&1 && break; sleep 3; done
+          curl -fsS http://localhost:8080/login >/dev/null
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Testes de API com a coleção do Postman (Newman)
+        run: |
+          npm install -g --silent newman newman-reporter-htmlextra
+          mkdir -p relatorios
+          newman run postman/clinica.postman_collection.json \
+            --reporters cli,htmlextra,junit,json \
+            --reporter-htmlextra-export relatorios/postman.html \
+            --reporter-htmlextra-title "Clínica - testes de API (Postman)" \
+            --reporter-junit-export relatorios/postman.xml \
+            --reporter-json-export relatorios/postman.json
+
+      - name: Resumo do Postman
+        if: always()
+        run: |
+          [ -f relatorios/postman.json ] || exit 0
+          jq -r '.run.stats as $s | .run.failures as $f |
+            "## Testes de API (Postman/Newman)\n\n| | Total | Falhas |\n|---|---|---|\n" +
+            "| Requisições | \($s.requests.total) | \($s.requests.failed) |\n" +
+            "| Verificações (asserts) | \($s.assertions.total) | \($s.assertions.failed) |\n" +
+            (if ($f|length) > 0 then "\n**Falhas:**\n" + ([$f[] | "- \(.source.name // "?"): \(.error.message)"] | join("\n")) else "\nTodas passaram ✅" end)' \
+            relatorios/postman.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Teste de carga (K6)
+        run: |
+          docker run --rm --network host -u "$(id -u)" -v "$PWD:/w" -w /w grafana/k6 run --quiet k6/carga.js
+          mv relatorio-k6.* relatorios/
+          cat relatorios/relatorio-k6.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar relatórios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-api-e-carga
+          path: relatorios/
+          if-no-files-found: ignore
+
+      - name: Logs (se algo falhar)
+        if: failure()
+        run: docker compose logs --no-color app | tail -150
+
+      - name: Derrubar
+        if: always()
+        run: docker compose down -v
+
   qualidade:
     runs-on: ubuntu-latest
     steps:
@@ -108,7 +168,7 @@ jobs:
   # Só publica se TODOS os testes passaram e o push foi na main
   publicar-imagem:
     name: Publicar imagem (ghcr.io) + varredura de segurança
-    needs: [qualidade, java-mais-novo, container, kubernetes]
+    needs: [qualidade, java-mais-novo, container, kubernetes, api-e-carga]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
