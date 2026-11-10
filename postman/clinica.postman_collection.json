@@ -867,7 +867,7 @@
                   "pm.test('Tem pelo menos uma cobrança', () => pm.expect(linhas.length).to.be.above(1));",
                   "pm.test('Toda linha tem 7 colunas', () => linhas.forEach(l => pm.expect(l.split(';').length, l).to.eql(7)));",
                   "pm.test('Nenhuma célula começa com = + - @ (proteção contra injeção de fórmula)', () => linhas.slice(1).forEach(l => l.split(';').forEach(c => pm.expect(c.replace(/^\"/, '')).to.not.match(/^[=+\\-@]/))));",
-                  "pm.test('Traz as cobranças dos pacientes fictícios', () => { pm.expect(texto).to.include('PAC-DEMO0001'); pm.expect(texto).to.include('PAC-DEMO0002'); });",
+                  "pm.test('Traz a cobrança fictícia da Ana (código, pagador e CPF)', () => { const ana = linhas.find(l => l.startsWith('PAC-DEMO0001;')); pm.expect(ana, 'linha da PAC-DEMO0001').to.exist; pm.expect(ana).to.include('Ana Exemplo'); pm.expect(ana).to.include('111.444.777-35'); });",
                   "pm.test('Content-Type text/csv', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('text/csv'));",
                   "pm.test('Vem como anexo .csv para download', () => { const d = pm.response.headers.get('Content-Disposition') || ''; pm.expect(d).to.include('attachment'); pm.expect(d).to.include('.csv'); });",
                   "pm.test('Responde em menos de 1500 ms', () => pm.expect(pm.response.responseTime).to.be.below(1500));"
