@@ -6,7 +6,7 @@ Sistema web para uma clínica de psicologia com **área clínica, área financei
 
 | Testes | Cobertura de linhas (JaCoCo) | Mutation score (PIT) |
 |---|---|---|
-| 331, todos passando (75 cenários BDD) | 97,9% (mínimo exigido: 85%) | 100%, 128 de 128 mutantes mortos (mínimo exigido: 90%) |
+| 342, todos passando (75 cenários BDD), mais 98 verificações de API (Postman) e teste de carga (K6) | 97,9% (mínimo exigido: 85%) | 100%, 128 de 128 mutantes mortos (mínimo exigido: 90%) |
 
 ## Por que separar?
 
